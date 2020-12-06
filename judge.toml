@@ -1,5 +1,5 @@
-[jobs.miniplc0]
+[jobs.c0]
 image = {source = "dockerfile", path = ".", tag = "c0-java"}
 run = [
-  "java -jar build/libs/c0.jar -l $input -o $output",
+  "java -jar build/libs/c0.jar $input -o $asm",
 ]
