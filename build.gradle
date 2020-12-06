@@ -1,0 +1,38 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    // This dependency is used by the application.
+    implementation 'com.google.guava:guava:29.0-jre'
+    implementation 'net.sourceforge.argparse4j:argparse4j:0.8.1'
+
+    // Use JUnit test framework
+    testImplementation 'org.junit.vintage:junit-vintage-engine:5.7.0'
+}
+
+application {
+    // Define the main class for the application.
+    mainClassName = 'c0.App'
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Main-Class': application.mainClassName
+    }
+    baseName = "${rootProject.name}"
+    from {
+        configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    with jar
+}
