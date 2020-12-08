@@ -1,6 +1,14 @@
 package c0;
 
 
+import c0.analyser.Analyser;
+import c0.analyser.SymbolIter;
+import c0.tokenizer.StringIter;
+import c0.tokenizer.Token;
+import c0.tokenizer.TokenType;
+import c0.tokenizer.Tokenizer;
+
+
 import net.sourceforge.argparse4j.*;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -60,8 +68,19 @@ public class App<scanner> {
         }
 
         Scanner scanner = new Scanner(input);
-        output.println("haha");
+        var iter = new StringIter(scanner);
+        var tokenizer = new Tokenizer(iter);
+        var symbolIter = new SymbolIter(tokenizer);
+        var analyse = new Analyser(symbolIter);
 
+        try {
+            analyse.analyse();
+        } catch (Exception e) {
+            // 遇到错误不输出，直接退出
+            System.err.println(e);
+            System.exit(-1);
+            return;
+        }
     }
 
 
