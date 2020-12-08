@@ -11,12 +11,15 @@ fn main() -> int {
     let i: int = 0;
     let j: int;
     j = getint();
-    while i - j {
+    while i < j {
         putint(i);
         putchar(32);
         putint(fib(i));
         putln();
+        let i : int = 1;
+        let i : int;
         i = i + 1;
     }
     return 0;
 }
+

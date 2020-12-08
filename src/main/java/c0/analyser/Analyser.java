@@ -3,22 +3,42 @@ package c0.analyser;
 import c0.error.AnalyzeError;
 import c0.error.CompileError;
 import c0.error.ErrorCode;
+import c0.symbolTable.*;
 import c0.tokenizer.Token;
 import c0.tokenizer.TokenType;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class Analyser {
 
-
+    //封装了词法分析器，用来解析token
     SymbolIter it;
+    //符号表
+    SymbolTable symbolTable;
+    //用于Type类型之间的映射，不然手写判断可太蠢了
+    Map<TokenType, DataType> typeMap;
 
 
     public Analyser(SymbolIter symbolIter) {
         this.it = symbolIter;
+        symbolTable = new SymbolTable();
+        typeMap = new HashMap<>();
     }
 
 
     public void analyse() throws CompileError {
+        initTypeMap();
+        symbolTable.initSymbolTable();
         analyseProgram();
+    }
+
+    public void initTypeMap() {
+        this.typeMap.put(TokenType.INT, DataType.INT);
+        this.typeMap.put(TokenType.VOID, DataType.VOID);
+        this.typeMap.put(TokenType.DOUBLE, DataType.DOUBLE);
+        this.typeMap.put(TokenType.STRING, DataType.STRING);
+        this.typeMap.put(TokenType.CHAR, DataType.CHAR);
     }
 
     /**
@@ -57,6 +77,8 @@ public class Analyser {
      * @throws CompileError
      */
     public void analyseVariableDecl() throws  CompileError {
+
+        boolean isInit = false;
         it.expectToken(TokenType.LET_KW);
         Token variable = it.expectToken(TokenType.IDENT);
         it.expectToken(TokenType.COLON);
@@ -71,10 +93,17 @@ public class Analyser {
         }
 
         if(it.nextIf(TokenType.ASSIGN)!=null){
+            isInit = true;               //变量被初始化
             analyseExpr();
         }
 
         it.expectToken(TokenType.SEMICOLON);
+
+        // 在符号表中注册一个新的变量符号
+        DataType dataType = this.typeMap.get(ty.getTokenType());
+        VarSymbol varSymbol = new VarSymbol(variable.getValueString(), SymbolType.VARIABLE, dataType, 0, variable.getStartPos());
+        varSymbol.setInitialized(isInit);
+        this.symbolTable.insertSymbol(varSymbol);
 
         //解析变量声明分析完毕
         return;
@@ -102,6 +131,13 @@ public class Analyser {
         it.expectToken(TokenType.ASSIGN);
         analyseExpr();
         it.expectToken(TokenType.SEMICOLON);
+
+        //获取对应的符号数据类型
+        DataType dataType = this.typeMap.get(ty.getTokenType());
+        VarSymbol varSymbol = new VarSymbol(variable.getValueString(), SymbolType.CONST, dataType, 0, variable.getStartPos());
+        varSymbol.setInitialized(true);
+        this.symbolTable.insertSymbol(varSymbol);
+
     }
 
 
@@ -128,9 +164,13 @@ public class Analyser {
             throw new AnalyzeError(ErrorCode.InvalidType, ty.getStartPos());
         }
 
+        //获取函数的返回数据类型
+        DataType dataType=this.typeMap.get(ty.getTokenType());
+        //生成新的函数符号
+        FuncSymbol funcSymbol = new FuncSymbol(fnIdent.getValueString(), SymbolType.FUNC, dataType, 0, fnIdent.getStartPos());
+        this.symbolTable.insertSymbol(funcSymbol);
         analyseBlockStmt();
     }
-
 
     /**
      * 分析函数参数列表：function_param_list -> function_param (',' function_param)*
@@ -228,12 +268,13 @@ public class Analyser {
      * @throws CompileError
      */
     public void analyseBlockStmt() throws  CompileError {
-
         it.expectToken(TokenType.L_BRACE);
+        this.symbolTable.addBlockSymbolTable();
         while(it.check(TokenType.R_BRACE) == false) {
             analyseStmt();
         }
         it.expectToken(TokenType.R_BRACE);
+        this.symbolTable.rmBlockSymbolTable();
     }
 
 

@@ -14,6 +14,7 @@ public enum TokenType {
     STRING_VALUE,
     /** double 浮点型字面量*/
     DOUBLE_VALUE,
+    /** char 字符型字面量 */
 
     /** ------------- 关键字token --------------**/
     /** 整型声明 */

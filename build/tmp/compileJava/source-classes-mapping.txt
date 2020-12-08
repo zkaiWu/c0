@@ -2,26 +2,36 @@ c0/util/Pos.java
  c0.util.Pos
 c0/tokenizer/StringIter.java
  c0.tokenizer.StringIter
-c0/tokenizer/Token.java
- c0.tokenizer.Token
-c0/tokenizer/TokenType.java
- c0.tokenizer.TokenType
-c0/analyser/SymbolType.java
- c0.analyser.SymbolType
-c0/analyser/SymbolIter.java
- c0.analyser.SymbolIter
-c0/analyser/SymbolEntry.java
- c0.analyser.SymbolEntry
+c0/symbolTable/BlockSymbolTable.java
+ c0.symbolTable.BlockSymbolTable
+c0/symbolTable/DataType.java
+ c0.symbolTable.DataType
 c0/error/ExpectedError.java
  c0.error.ExpectedError
 c0/error/AnalyzeError.java
  c0.error.AnalyzeError
-c0/error/CompileError.java
- c0.error.CompileError
-c0/error/TokenizeError.java
- c0.error.TokenizeError
 c0/tokenizer/Tokenizer.java
  c0.tokenizer.Tokenizer
+c0/symbolTable/SymbolType.java
+ c0.symbolTable.SymbolType
+c0/tokenizer/Token.java
+ c0.tokenizer.Token
+c0/symbolTable/VarSymbol.java
+ c0.symbolTable.VarSymbol
+c0/symbolTable/SymbolTable.java
+ c0.symbolTable.SymbolTable
+c0/symbolTable/FuncSymbol.java
+ c0.symbolTable.FuncSymbol
+c0/error/TokenizeError.java
+ c0.error.TokenizeError
+c0/symbolTable/Symbol.java
+ c0.symbolTable.Symbol
+c0/analyser/SymbolIter.java
+ c0.analyser.SymbolIter
+c0/error/CompileError.java
+ c0.error.CompileError
+c0/tokenizer/TokenType.java
+ c0.tokenizer.TokenType
 c0/error/ErrorCode.java
  c0.error.ErrorCode
 c0/App.java
