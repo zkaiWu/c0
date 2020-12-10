@@ -173,7 +173,6 @@ public class Analyser {
         }
 
         DType funcReturnType = this.typeMap.get(ty.getTokenType());
-        System.out.println(funcReturnType);
         funcSymbol.setdType(funcReturnType);
 
         this.symbolTable.insertSymbol(funcSymbol);
@@ -464,6 +463,10 @@ public class Analyser {
 
         DType dType = analyseAtom();
 
+        if(dType == DType.VOID) {
+            throw new AnalyzeError(ErrorCode.InvalidOpVoid, it.peekToken().getStartPos());
+        }
+
         while(it.check(TokenType.AS_KW)) {
             it.expectToken(TokenType.AS_KW);      //吃掉as符号
             Token ty = it.next();
@@ -543,9 +546,7 @@ public class Analyser {
         if(symbol == null) {
             throw new AnalyzeError(ErrorCode.NotDeclared, identToken.getStartPos());
         }
-        System.out.println(symbol);
         DType leftType = symbol.getdType();
-
 
         //  赋值语句
         if(it.check(TokenType.ASSIGN)) {
