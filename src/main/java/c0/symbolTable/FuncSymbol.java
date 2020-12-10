@@ -12,8 +12,8 @@ public class FuncSymbol extends Symbol{
     //函数的形参表
     private ArrayList<VarSymbol> argsList;
 
-    public FuncSymbol(String name, SymbolType symbolType, DataType dataType, Integer offset, Pos pos) {
-        super(name, symbolType, dataType, offset, pos);
+    public FuncSymbol(String name, SymbolType symbolType, DType dType, Integer offset, Pos pos) {
+        super(name, symbolType, dType, offset, pos);
         this.argsList = new ArrayList<>();
     }
 
@@ -34,4 +34,11 @@ public class FuncSymbol extends Symbol{
         argsList.add(varSymbol);
     }
 
+    public ArrayList<VarSymbol> getArgsList() {
+        return argsList;
+    }
+
+    public void setArgsList(ArrayList<VarSymbol> argsList) {
+        this.argsList = argsList;
+    }
 }

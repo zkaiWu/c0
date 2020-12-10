@@ -7,6 +7,7 @@ import c0.symbolTable.*;
 import c0.tokenizer.Token;
 import c0.tokenizer.TokenType;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,7 +18,7 @@ public class Analyser {
     //符号表
     SymbolTable symbolTable;
     //用于Type类型之间的映射，不然手写判断可太蠢了
-    Map<TokenType, DataType> typeMap;
+    Map<TokenType, DType> typeMap;
 
 
     public Analyser(SymbolIter symbolIter) {
@@ -34,11 +35,11 @@ public class Analyser {
     }
 
     public void initTypeMap() {
-        this.typeMap.put(TokenType.INT, DataType.INT);
-        this.typeMap.put(TokenType.VOID, DataType.VOID);
-        this.typeMap.put(TokenType.DOUBLE, DataType.DOUBLE);
-        this.typeMap.put(TokenType.STRING, DataType.STRING);
-        this.typeMap.put(TokenType.CHAR, DataType.CHAR);
+        this.typeMap.put(TokenType.INT, DType.INT);
+        this.typeMap.put(TokenType.VOID, DType.VOID);
+        this.typeMap.put(TokenType.DOUBLE, DType.DOUBLE);
+        this.typeMap.put(TokenType.STRING, DType.STRING);
+        this.typeMap.put(TokenType.CHAR, DType.CHAR);
     }
 
     /**
@@ -59,7 +60,7 @@ public class Analyser {
                 analyseConstDecl();
             }
             else if( it.check(TokenType.FN_KW) ) {
-                analyseFunc();
+                analyseFuncDecl();
             }
         }
 
@@ -100,8 +101,8 @@ public class Analyser {
         it.expectToken(TokenType.SEMICOLON);
 
         // 在符号表中注册一个新的变量符号
-        DataType dataType = this.typeMap.get(ty.getTokenType());
-        VarSymbol varSymbol = new VarSymbol(variable.getValueString(), SymbolType.VARIABLE, dataType, 0, variable.getStartPos());
+        DType dType = this.typeMap.get(ty.getTokenType());
+        VarSymbol varSymbol = new VarSymbol(variable.getValueString(), SymbolType.VARIABLE, dType, 0, variable.getStartPos());
         varSymbol.setInitialized(isInit);
         this.symbolTable.insertSymbol(varSymbol);
 
@@ -133,8 +134,8 @@ public class Analyser {
         it.expectToken(TokenType.SEMICOLON);
 
         //获取对应的符号数据类型
-        DataType dataType = this.typeMap.get(ty.getTokenType());
-        VarSymbol varSymbol = new VarSymbol(variable.getValueString(), SymbolType.CONST, dataType, 0, variable.getStartPos());
+        DType dType = this.typeMap.get(ty.getTokenType());
+        VarSymbol varSymbol = new VarSymbol(variable.getValueString(), SymbolType.CONST, dType, 0, variable.getStartPos());
         varSymbol.setInitialized(true);
         this.symbolTable.insertSymbol(varSymbol);
 
@@ -145,17 +146,24 @@ public class Analyser {
      * 分析函数声明：'fn' IDENT '(' function_param_list? ')' '->' ty block_stmt
      * @throws CompileError
      */
-    public void analyseFunc() throws  CompileError {
+    public void analyseFuncDecl() throws  CompileError {
 
 
         it.expectToken(TokenType.FN_KW);
         Token fnIdent = it.expectToken(TokenType.IDENT);
+
+        //生成新的函数符号
+        FuncSymbol funcSymbol = new FuncSymbol(fnIdent.getValueString(), SymbolType.FUNC, DType.INT, 0, fnIdent.getStartPos());
+
+
         it.expectToken(TokenType.L_PAREN);
+
 
         //paramlist 是可选的
         if(it.peekToken().getTokenType() == TokenType.IDENT || it.peekToken().getTokenType() == TokenType.CONST_KW) {
-            analyseFuncParamList();
+            analyseFuncParamList(funcSymbol);
         }
+//        System.out.println("fn "+ fnIdent.getValueString() + " param is : " + funcSymbol.getArgsList());
 
         it.expectToken(TokenType.R_PAREN);
         it.expectToken(TokenType.ARROW);
@@ -164,36 +172,44 @@ public class Analyser {
             throw new AnalyzeError(ErrorCode.InvalidType, ty.getStartPos());
         }
 
-        //获取函数的返回数据类型
-        DataType dataType=this.typeMap.get(ty.getTokenType());
-        //生成新的函数符号
-        FuncSymbol funcSymbol = new FuncSymbol(fnIdent.getValueString(), SymbolType.FUNC, dataType, 0, fnIdent.getStartPos());
+        DType funcReturnType = this.typeMap.get(ty.getTokenType());
+        System.out.println(funcReturnType);
+        funcSymbol.setdType(funcReturnType);
+
         this.symbolTable.insertSymbol(funcSymbol);
-        analyseBlockStmt();
+        analyseBlockStmt(funcSymbol);
     }
 
     /**
      * 分析函数参数列表：function_param_list -> function_param (',' function_param)*
      * @throws CompileError
      */
-    public void analyseFuncParamList() throws CompileError {
-        analyseFuncParam();
+    public void analyseFuncParamList(FuncSymbol funcSymbol) throws CompileError {
+        VarSymbol varSymbol = analyseFuncParam();
+        funcSymbol.addArgs(varSymbol);
         while(it.nextIf(TokenType.COMMA)!=null) {
-            analyseFuncParam();
+            VarSymbol varSymbolMany = analyseFuncParam();
+            funcSymbol.addArgs(varSymbolMany);
         }
     }
 
-
     /**
      * 分析函数参数：function_param -> 'const'? IDENT ':' ty
+     * @return Symbol 返回解析的函数参数符号
      * @throws CompileError
      */
-    public void analyseFuncParam() throws  CompileError {
+    public VarSymbol analyseFuncParam() throws  CompileError {
+
+        boolean isConst = false;
         if(it.check(TokenType.CONST_KW)) {
             it.expectToken(TokenType.CONST_KW);
+            isConst = true;
         }
+
         Token fnParam = it.expectToken(TokenType.IDENT);
         it.expectToken(TokenType.COLON);
+
+        //解析类型
         Token ty = it.next();
         if(ty.getTokenType()!=TokenType.INT && ty.getTokenType()!=TokenType.DOUBLE && ty.getTokenType()!=TokenType.VOID) {
             throw new AnalyzeError(ErrorCode.InvalidType, ty.getStartPos());
@@ -202,7 +218,14 @@ public class Analyser {
             throw new AnalyzeError(ErrorCode.InvalidVoid, ty.getStartPos());
         }
 
-        return;
+        VarSymbol varSymbol= new VarSymbol(fnParam.getValueString(),
+                                            isConst ? SymbolType.CONST:SymbolType.VARIABLE,
+                                            this.typeMap.get(ty.getTokenType()),
+                                            0,
+                                            fnParam.getStartPos());
+
+
+        return varSymbol;
     }
 
 
@@ -235,7 +258,7 @@ public class Analyser {
             analyseEmptyStmt();
         }
         else if(token.getTokenType() == TokenType.L_BRACE) {
-            analyseBlockStmt();
+            analyseBlockStmt(null);
         }
         else if(token.getTokenType() == TokenType.RETURN_KW) {
             analyseReturnStmt();
@@ -265,15 +288,30 @@ public class Analyser {
 
     /**
      * 分析语句块：block_stmt -> '{' stmt* '}'
+     * @param funcSymbol 函数的符号，用来获取函数的参数
      * @throws CompileError
      */
-    public void analyseBlockStmt() throws  CompileError {
+    public void analyseBlockStmt(FuncSymbol funcSymbol) throws  CompileError {
         it.expectToken(TokenType.L_BRACE);
+
+        //生成新的符号表块
         this.symbolTable.addBlockSymbolTable();
+
+        //将函数的参数表插入符号表中
+        if(funcSymbol!=null) {
+            int agrsSize = funcSymbol.getArgsList().size();
+            ArrayList<VarSymbol> funcParams = funcSymbol.getArgsList();
+            for (int i = 0; i < agrsSize; i++) {
+                this.symbolTable.insertSymbol(funcParams.get(i));
+            }
+        }
+
         while(it.check(TokenType.R_BRACE) == false) {
             analyseStmt();
         }
         it.expectToken(TokenType.R_BRACE);
+
+        //删除这个符号表块
         this.symbolTable.rmBlockSymbolTable();
     }
 
@@ -294,7 +332,7 @@ public class Analyser {
     public void analyseWhileStmt() throws  CompileError {
         it.expectToken(TokenType.WHILE_KW);
         analyseExpr();
-        analyseBlockStmt();
+        analyseBlockStmt(null);
     }
 
 
@@ -305,13 +343,13 @@ public class Analyser {
     public void analyseIfStmt() throws  CompileError {
         it.expectToken(TokenType.IF_KW);
         analyseExpr();
-        analyseBlockStmt();
+        analyseBlockStmt(null);
         if(it.check(TokenType.ELSE_KW)) {
             it.expectToken(TokenType.ELSE_KW);
             //接下来对应两个分支，分别是block_stmt以及if_stmt;
             if (it.check(TokenType.L_BRACE)) {
                 //这是block_stmt分支
-                analyseBlockStmt();
+                analyseBlockStmt(null);
             }
             else if(it.peekToken().getTokenType() == TokenType.IF_KW) {
                 analyseIfStmt();
@@ -359,14 +397,15 @@ public class Analyser {
      * Factor -> Atom { as ( INT | DOUBLE )}?
      * Atom -> '-'? Item
      * Item -> '(' Expr ')' |IDENT | UINT_VALUE | DOUBLE_VALUE | func_call | IDENT '=' E
-     *
+     * 每一个表达式都会返回其类型用来做判断
+     * @return 返回一个SymbolType用来做类型判断
      * @throws CompileError
      */
-    public void analyseExpr() throws CompileError {
+    public DType analyseExpr() throws CompileError {
 
 
 
-        analyseCond();
+        DType leftType = analyseCond();
         Token token = it.peekToken();
 
         //可选的比较
@@ -374,26 +413,29 @@ public class Analyser {
             token.getTokenType() == TokenType.LT || token.getTokenType() == TokenType.GT ||
             token.getTokenType() == TokenType.LE || token.getTokenType() == TokenType.GE) {
 
-            it.next();
-            analyseCond();
+            Token compare = it.next();
+            DType rightType = analyseCond();
+            TypeChecker.typeCheck(leftType, rightType, compare.getStartPos());
         }
 
-        return;
+        return leftType;
     }
 
     /**
      * 分析Cond表达式：Cond -> Term {(+ | -) Term}
      * @throws CompileError
      */
-    public void analyseCond() throws  CompileError {
+    public DType analyseCond() throws  CompileError {
 
-        analyseTerm();
+        DType leftType = analyseTerm();
         while(it.check(TokenType.PLUS)||it.check(TokenType.MINUS)) {
             Token token = it.next();
-            analyseTerm();
+            DType rightType = analyseTerm();
+            TypeChecker.typeCheck(leftType, rightType, token.getStartPos());
+            leftType = rightType;
         }
 
-        return;
+        return leftType;
     }
 
 
@@ -401,15 +443,16 @@ public class Analyser {
      * 分析Term表达式 ：Term -> Factor { (* | /) Factor}
      * @throws CompileError
      */
-    public void analyseTerm() throws CompileError {
+    public DType analyseTerm() throws CompileError {
 
-        analyseFactor();
+        DType leftType = analyseFactor();
         while(it.check(TokenType.MUL)||it.check(TokenType.DIV)) {
             Token token = it.next();
-            analyseFactor();
+            DType rightType = analyseFactor();
+            TypeChecker.typeCheck(leftType, rightType, token.getStartPos());
         }
 
-        return;
+        return leftType;
     }
 
 
@@ -417,9 +460,9 @@ public class Analyser {
      * 分析Factor表达式： Factor -> Atom { as ( INT | DOUBLE )}
      * @throws CompileError
      */
-    public void analyseFactor() throws CompileError {
+    public DType analyseFactor() throws CompileError {
 
-        analyseAtom();
+        DType dType = analyseAtom();
 
         while(it.check(TokenType.AS_KW)) {
             it.expectToken(TokenType.AS_KW);      //吃掉as符号
@@ -427,9 +470,10 @@ public class Analyser {
             if(ty.getTokenType()!=TokenType.INT&&ty.getTokenType()!=TokenType.DOUBLE) {         //as 只能接INT和DOUBLE
                 throw new AnalyzeError(ErrorCode.UnExpectToken, ty.getStartPos());
             }
+            dType = this.typeMap.get(ty.getTokenType());
         }
 
-        return;
+        return dType;
     }
 
 
@@ -437,14 +481,14 @@ public class Analyser {
      * 分析Atom语句：Atom -> '-'? Item
      * @throws CompileError
      */
-    public void analyseAtom() throws CompileError {
+    public DType analyseAtom() throws CompileError {
 
         //如果存在'-'号
         if(it.check(TokenType.MINUS)){
             it.next();          //吃掉负号
         }
 
-        analyseItem();
+        return analyseItem();
     }
 
     /**
@@ -452,75 +496,112 @@ public class Analyser {
      * 其中func_call 的first集也是IDent
      * @throws CompileError
      */
-    public void analyseItem() throws  CompileError {
+    public DType analyseItem() throws  CompileError {
 
-
+        DType dType = DType.INT;
         //对应 '(' Expr ')'
         if(it.check(TokenType.L_PAREN)) {
             it.expectToken(TokenType.L_PAREN);
-            analyseExpr();
+            dType = analyseExpr();
             it.expectToken(TokenType.R_PAREN);
         }
-        //对应 UINT_VALUE
+        //对应 UINT_VALUE, 整型字面量
         else if(it.check(TokenType.UINT_VALUE)) {
             it.expectToken(TokenType.UINT_VALUE);
+            dType = DType.INT;
         }
+        //对应DOUBLE_VALUE，浮点型字面量
         else if(it.check(TokenType.DOUBLE_VALUE)) {
             it.expectToken(TokenType.DOUBLE_VALUE);
+            dType = DType.DOUBLE;
         }
+        //对应剩下的三个，其前缀相同
         else if(it.check(TokenType.IDENT)) {
-            analyseCallOrAssignOrIdent();
+            dType = analyseCallOrAssignOrIdent();
         }
         else {
             throw new AnalyzeError(ErrorCode.UnExpectToken, it.peekToken().getStartPos());
         }
+
+        return dType;
     }
 
 
     /**
      * 分析赋值语句，Ident表达式以及函数调用表达式
-     * call_expr -> IDENT '(' call_param_list? ')'
-     * ident_expr -> IDENT
-     * assign_expr -> l_expr '=' expr； l_expr -> IDENT
+     * call_expr -> IDENT '(' call_param_list? ')'  类型为函数的返回类型
+     * ident_expr -> IDENT 类型为IDENT的类型
+     * assign_expr -> l_expr '=' expr； l_expr -> IDENT   类型为void
      * 因为其
      * @throws CompileError
      */
-    public void analyseCallOrAssignOrIdent() throws CompileError {
+    public DType analyseCallOrAssignOrIdent() throws CompileError {
 
         Token identToken = it.expectToken(TokenType.IDENT);
 
+        Symbol symbol = this.symbolTable.findAllSymbol(identToken.getValueString());
+        if(symbol == null) {
+            throw new AnalyzeError(ErrorCode.NotDeclared, identToken.getStartPos());
+        }
+        System.out.println(symbol);
+        DType leftType = symbol.getdType();
+
+
         //  赋值语句
         if(it.check(TokenType.ASSIGN)) {
-            it.expectToken(TokenType.ASSIGN);
-            analyseExpr();
+            Token assign = it.expectToken(TokenType.ASSIGN);
+            //如果被赋值的是一个常量，则抛出异常
+            if(symbol.getSymbolType() == SymbolType.CONST) {
+                throw new AnalyzeError(ErrorCode.AssignToConstant, assign.getStartPos());
+            }
+            DType rightType = analyseExpr();
+            TypeChecker.typeCheck(leftType, rightType, assign.getStartPos());
+
+            //赋值语句的类型是void
+            return DType.VOID;
         }
+
 
         // 函数调用语句
         else if(it.check(TokenType.L_PAREN)) {
+
+            //如果这个函数不是一个标识符号
+            if(symbol.getSymbolType()!=SymbolType.FUNC) {
+                throw new AnalyzeError(ErrorCode.NotDeclared, identToken.getStartPos());
+            }
             it.expectToken(TokenType.L_PAREN);
             if(it.check(TokenType.L_PAREN) || it.check(TokenType.MINUS) ||
                 it.check(TokenType.UINT_VALUE) || it.check(TokenType.STRING_VALUE) ||
                 it.check(TokenType.DOUBLE_VALUE) || it.check(TokenType.IDENT)) {
 
-                analyseCallParam();
+                analyseCallParam((FuncSymbol) symbol, identToken);
             }
             it.expectToken(TokenType.R_PAREN);
         }
 
-        return;
+        return leftType;
     }
 
 
     /**
      * 分析函数的参数：call_param_list -> expr (',' expr)*
+     * 然后检查函数调用的参数是否相同。
+     * @param  funcSymbol 函数的符号，用来获取参数信息
+     * @param funcToken 函数的Token， 用来获取位置报错
      * @throws CompileError
      */
-    public void analyseCallParam() throws CompileError {
-        analyseExpr();
+    public void analyseCallParam(FuncSymbol funcSymbol, Token funcToken) throws CompileError {
+        //实际参数的类型表
+        ArrayList<DType> actualArgList = new ArrayList<>();
+        DType dType = analyseExpr();
+        actualArgList.add(dType);
         while(it.check(TokenType.COMMA)) {
             it.expectToken(TokenType.COMMA);
-            analyseExpr();
+            dType = analyseExpr();
+            actualArgList.add(dType);
         }
+        TypeChecker.callArgTypeCheck(funcSymbol, actualArgList, funcToken);
+
         return;
     }
 }

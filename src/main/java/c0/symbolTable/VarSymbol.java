@@ -6,8 +6,8 @@ public class VarSymbol extends  Symbol{
 
     private boolean initialized;
 
-    public VarSymbol(String name, SymbolType symbolType, DataType dataType, Integer offset, Pos pos) {
-        super(name, symbolType, dataType, offset, pos);
+    public VarSymbol(String name, SymbolType symbolType, DType dType, Integer offset, Pos pos) {
+        super(name, symbolType, dType, offset, pos);
     }
 
     public boolean setInitialized(boolean initialized) {
@@ -18,4 +18,6 @@ public class VarSymbol extends  Symbol{
     public boolean getInitialized() {
         return this.initialized;
     }
+
+
 }

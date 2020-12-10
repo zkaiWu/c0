@@ -4,7 +4,7 @@ package c0.symbolTable;
 /**
  * 如果为数据，则要声明类型
  */
-public enum  DataType {
+public enum DType {
 
     /** 整型 */
     INT,

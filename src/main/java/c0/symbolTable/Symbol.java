@@ -9,16 +9,16 @@ public class Symbol {
     //符号类型
     private SymbolType symbolType;
     //数据类型
-    private DataType dataType;
+    private DType dType;
     //在符号表中的偏移
     private Integer offset;
     //在源代码中的位置
     private Pos pos;
 
-    public Symbol(String name, SymbolType symbolType, DataType dataType, Integer offset, Pos pos) {
+    public Symbol(String name, SymbolType symbolType, DType dType, Integer offset, Pos pos) {
         this.name = name;
         this.symbolType = symbolType;
-        this.dataType = dataType;
+        this.dType = dType;
         this.offset = offset;
         this.pos = pos;
     }
@@ -39,12 +39,12 @@ public class Symbol {
         this.symbolType = symbolType;
     }
 
-    public DataType getDataType() {
-        return dataType;
+    public DType getdType() {
+        return dType;
     }
 
-    public void setDataType(DataType dataType) {
-        this.dataType = dataType;
+    public void setdType(DType dType) {
+        this.dType = dType;
     }
 
     public Integer getOffset() {
@@ -61,5 +61,16 @@ public class Symbol {
 
     public void setPos(Pos pos) {
         this.pos = pos;
+    }
+
+    @Override
+    public String toString() {
+        return "Symbol{" +
+                "name='" + name + '\'' +
+                ", symbolType=" + symbolType +
+                ", dataType=" + dType +
+                ", offset=" + offset +
+                ", pos=" + pos +
+                '}';
     }
 }
