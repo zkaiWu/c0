@@ -1,21 +1,17 @@
-fn fib(x: int) -> int {
-    if x<=1 {
-        return 1;
-    }
-    let result: int = fib(x - 1);
-    result = result + fib(x - 2);
-    return result;
+const xqy: int = 666;
+let wzk:int=1;
+fn fib(wzk: int) -> int {
+    let result:int = 1+1;
+    wzk = 1+1;
+    return -result;
 }
 
 fn main() -> int {
     let i: int = 0;
-    let j: int;
-    i = i+((i=1) as int);
-    while i < j {
-        fib(i);
-        let i : int = 1;
-        i = i + 1;
-    }
+    let j: int = -2;
+    i = getint();
+    putint(i);
+    fib(j);
+    i = i+j;
     return 0;
 }
-

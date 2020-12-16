@@ -78,7 +78,7 @@ public class SymbolTable {
     }
 
     /**
-     * 添加一个symbol，声明一个变量
+     * 添加一个symbol，声明一个变量，如果是一个全局变量，则改变其global位
      * @param symbol
      * @return
      * @throws AnalyzeError
@@ -86,6 +86,14 @@ public class SymbolTable {
     public boolean insertSymbol(Symbol symbol) throws AnalyzeError {
         BlockSymbolTable curBlock = this.symbolTable.get(this.symbolTable.size()-1);
         return curBlock.insertSymbol(symbol);
+    }
+
+    /**
+     * 获取当前在第几层，第0层为全局变量
+     * @return
+     */
+    public int getCurLevel() {
+        return this.level;
     }
 
 }

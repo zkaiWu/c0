@@ -3,6 +3,7 @@ package c0;
 
 import c0.analyser.Analyser;
 import c0.analyser.SymbolIter;
+import c0.navm.OoFile;
 import c0.tokenizer.StringIter;
 import c0.tokenizer.Token;
 import c0.tokenizer.TokenType;
@@ -74,10 +75,11 @@ public class App<scanner> {
         var analyse = new Analyser(symbolIter);
 
         try {
-            analyse.analyse();
+            OoFile ooFile = analyse.analyse();
+            ooFile.writeDebug(output);
         } catch (Exception e) {
             // 遇到错误不输出，直接退出
-            System.err.println(e);
+            e.printStackTrace();
             System.exit(-1);
             return;
         }

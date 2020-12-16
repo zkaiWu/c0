@@ -9,8 +9,14 @@ public class Symbol {
     //符号类型
     private SymbolType symbolType;
     //数据类型
+    //1.如果是变量或常量则记录其类型
+    //2。如果是函数则记录他们的返回值类型
     private DType dType;
-    //在符号表中的偏移
+    //有多种情况
+    //1：如果是局部变量和函数形参，则为他们的相对地址以供
+    //2：如果是全局变量，则为他们在全局变量表中的位移
+    //3：如果是普通函数，则为他们在函数列表中的位移
+    //4：如果是库函数，则为他们在全局变量表中的位移，用来callName
     private Integer offset;
     //在源代码中的位置
     private Pos pos;

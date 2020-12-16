@@ -5,5 +5,6 @@ public enum ErrorCode {
     StreamError, EOF, InvalidInput, InvalidIdentifier, IntegerOverflow, // int32_t overflow.
     NeedIdentifier, ConstantNeedValue, NoSemicolon, InvalidVariableDeclaration, IncompleteExpression,
     NotDeclared, AssignToConstant, DuplicateDeclaration, NotInitialized, InvalidAssignment, InvalidPrint, ExpectedToken,
-    InvalidVoid, InvalidType, UnExpectToken,DuplicateArgs,FuncNotDeclared,InvalidOpVoid,NotMatchedType,callArgNotMatched
+    InvalidVoid, InvalidType, UnExpectToken,DuplicateArgs,FuncNotDeclared,InvalidOpVoid,NotMatchedType,callArgNotMatched,AssignNotToVar,
+    NoMain
 }

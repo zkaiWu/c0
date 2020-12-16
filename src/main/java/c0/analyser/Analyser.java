@@ -3,9 +3,13 @@ package c0.analyser;
 import c0.error.AnalyzeError;
 import c0.error.CompileError;
 import c0.error.ErrorCode;
+import c0.navm.Lib;
+import c0.navm.OoFile;
+import c0.navm.instruction.*;
 import c0.symbolTable.*;
 import c0.tokenizer.Token;
 import c0.tokenizer.TokenType;
+import c0.util.Pos;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,19 +23,24 @@ public class Analyser {
     SymbolTable symbolTable;
     //用于Type类型之间的映射，不然手写判断可太蠢了
     Map<TokenType, DType> typeMap;
+    //oO文件，在分析时填充
+    OoFile oO;
 
 
     public Analyser(SymbolIter symbolIter) {
         this.it = symbolIter;
         symbolTable = new SymbolTable();
         typeMap = new HashMap<>();
+        oO = new OoFile();
     }
 
 
-    public void analyse() throws CompileError {
+    public OoFile analyse() throws CompileError {
         initTypeMap();
         symbolTable.initSymbolTable();
         analyseProgram();
+        analyseTail();
+        return this.oO;
     }
 
     public void initTypeMap() {
@@ -40,6 +49,29 @@ public class Analyser {
         this.typeMap.put(TokenType.DOUBLE, DType.DOUBLE);
         this.typeMap.put(TokenType.STRING, DType.STRING);
         this.typeMap.put(TokenType.CHAR, DType.CHAR);
+    }
+
+
+    /**
+     * 分析完毕后的函数，做一些收尾的检查和生成语句的工作
+     * @return boolean 是否生成成功
+     * @throws AnalyzeError
+     */
+    public boolean analyseTail() throws AnalyzeError {
+        assert this.symbolTable.getCurLevel() == 0;
+        Symbol symbol = symbolTable.findAllSymbol("main");
+        if(symbol==null || symbol.getSymbolType()!=SymbolType.FUNC) {
+            throw new AnalyzeError(ErrorCode.NoMain, new Pos(0,0));
+        }
+        assert symbol instanceof FuncSymbol;
+        FuncSymbol funcSymbol = (FuncSymbol) symbol;
+
+        //为_start函数添加调用main的指令
+        this.oO.addStartInstruction(new InstructionU32(InstructionType.StackAlloc, (int)1));
+        this.oO.addStartInstruction(new InstructionU32(InstructionType.Call, (int)funcSymbol.getOffset()));
+        this.oO.addStartInstruction(new InstructionU32(InstructionType.PopN, (int)1));
+
+        return true;
     }
 
     /**
@@ -93,19 +125,39 @@ public class Analyser {
             throw new AnalyzeError(ErrorCode.InvalidVoid, ty.getStartPos());
         }
 
+        VarSymbol varSymbol = new VarSymbol(variable.getValueString(), SymbolType.VARIABLE, this.typeMap.get(ty.getTokenType()), 0, variable.getStartPos());
+
+        //写入oOfile
+        int offset = 0;
+        if(this.symbolTable.getCurLevel() ==0 ) {
+            varSymbol.setGlobal(true);
+            offset = this.oO.addGlobVar(varSymbol);
+        } else {
+            offset = this.oO.addLocalVar(varSymbol);
+        }
+        varSymbol.setOffset(offset);
+
         if(it.nextIf(TokenType.ASSIGN)!=null){
-            isInit = true;               //变量被初始化
-            analyseExpr();
+            isInit = true;
+            if(this.symbolTable.getCurLevel() == 0 ){
+                this.oO.addInstruction(new InstructionU32(InstructionType.GlobA, (int)varSymbol.getOffset()));
+            }
+            else {
+                this.oO.addInstruction(new InstructionU32(InstructionType.LocA, (int)varSymbol.getOffset()));
+            }
+            DType exprDType = analyseExpr();
+            TypeChecker.typeCheck(this.typeMap.get(ty.getTokenType()), exprDType, variable.getStartPos());
+            this.oO.addInstruction(new InstructionNone(InstructionType.Store64));
+
         }
 
         it.expectToken(TokenType.SEMICOLON);
 
         // 在符号表中注册一个新的变量符号
-        DType dType = this.typeMap.get(ty.getTokenType());
-        VarSymbol varSymbol = new VarSymbol(variable.getValueString(), SymbolType.VARIABLE, dType, 0, variable.getStartPos());
-        varSymbol.setInitialized(isInit);
-        this.symbolTable.insertSymbol(varSymbol);
 
+        varSymbol.setInitialized(isInit);
+        // 如果是全局变量
+        this.symbolTable.insertSymbol(varSymbol);
         //解析变量声明分析完毕
         return;
     }
@@ -129,15 +181,44 @@ public class Analyser {
         if(it.check(TokenType.ASSIGN)==false) {
             throw new AnalyzeError(ErrorCode.ConstantNeedValue, it.peekToken().getStartPos());
         }
+
+        DType dType = this.typeMap.get(ty.getTokenType());
+        VarSymbol varSymbol = new VarSymbol(variable.getValueString(), SymbolType.CONST, dType, 0, variable.getStartPos());
+
+
+        //写入oofile中
+        int offset = 0;
+        if(this.symbolTable.getCurLevel() ==0 ) {
+            varSymbol.setGlobal(true);
+            offset = this.oO.addGlobVar(varSymbol);
+        } else {
+            offset = this.oO.addLocalVar(varSymbol);
+        }
+        varSymbol.setOffset(offset);
+
+
         it.expectToken(TokenType.ASSIGN);
-        analyseExpr();
+        //将变量的地址取出
+        if(this.symbolTable.getCurLevel() == 0 ){
+            this.oO.addInstruction(new InstructionU32(InstructionType.GlobA, (int)varSymbol.getOffset()));
+        }
+        else {
+            this.oO.addInstruction(new InstructionU32(InstructionType.LocA, (int)varSymbol.getOffset()));
+        }
+        DType exprDType=analyseExpr();
+        this.oO.addInstruction(new InstructionNone(InstructionType.Store64));
+
+
         it.expectToken(TokenType.SEMICOLON);
 
         //获取对应的符号数据类型
-        DType dType = this.typeMap.get(ty.getTokenType());
-        VarSymbol varSymbol = new VarSymbol(variable.getValueString(), SymbolType.CONST, dType, 0, variable.getStartPos());
+
         varSymbol.setInitialized(true);
+        TypeChecker.typeCheck(this.typeMap.get(ty.getTokenType()), exprDType, variable.getStartPos());
         this.symbolTable.insertSymbol(varSymbol);
+
+        //解析常量声明分析完毕
+        return;
 
     }
 
@@ -158,12 +239,10 @@ public class Analyser {
 
         it.expectToken(TokenType.L_PAREN);
 
-
         //paramlist 是可选的
         if(it.peekToken().getTokenType() == TokenType.IDENT || it.peekToken().getTokenType() == TokenType.CONST_KW) {
             analyseFuncParamList(funcSymbol);
         }
-//        System.out.println("fn "+ fnIdent.getValueString() + " param is : " + funcSymbol.getArgsList());
 
         it.expectToken(TokenType.R_PAREN);
         it.expectToken(TokenType.ARROW);
@@ -172,11 +251,20 @@ public class Analyser {
             throw new AnalyzeError(ErrorCode.InvalidType, ty.getStartPos());
         }
 
+        //设置返回参数
         DType funcReturnType = this.typeMap.get(ty.getTokenType());
         funcSymbol.setdType(funcReturnType);
 
+        //放入符号表中
         this.symbolTable.insertSymbol(funcSymbol);
+
+        //将这个函数写入oOfile中
+        this.oO.addFunction(funcSymbol);
+
+        //开始分析块语句
         analyseBlockStmt(funcSymbol);
+
+        this.oO.addInstruction(new InstructionNone(InstructionType.Ret));
     }
 
     /**
@@ -217,7 +305,8 @@ public class Analyser {
             throw new AnalyzeError(ErrorCode.InvalidVoid, ty.getStartPos());
         }
 
-        VarSymbol varSymbol= new VarSymbol(fnParam.getValueString(),
+        VarSymbol varSymbol;
+        varSymbol = new VarSymbol(fnParam.getValueString(),
                                             isConst ? SymbolType.CONST:SymbolType.VARIABLE,
                                             this.typeMap.get(ty.getTokenType()),
                                             0,
@@ -301,7 +390,11 @@ public class Analyser {
             int agrsSize = funcSymbol.getArgsList().size();
             ArrayList<VarSymbol> funcParams = funcSymbol.getArgsList();
             for (int i = 0; i < agrsSize; i++) {
-                this.symbolTable.insertSymbol(funcParams.get(i));
+                //是一个参数
+                VarSymbol funcParam = funcParams.get(i);
+                funcParam.setParam(true);
+                funcParam.setOffset(i+1);
+                this.symbolTable.insertSymbol(funcParam);
             }
         }
 
@@ -372,10 +465,15 @@ public class Analyser {
             token.getTokenType() == TokenType.UINT_VALUE || token.getTokenType() == TokenType.STRING_VALUE ||
             token.getTokenType() == TokenType.DOUBLE_VALUE) {
 
+
+            //有返回值,将返回值的地址放在Args[0]处
+            this.oO.addInstruction(new InstructionU32(InstructionType.ArgA,(int) 0));
             analyseExpr();
+            this.oO.addInstruction(new InstructionNone(InstructionType.Store64));
         }
 
         it.expectToken(TokenType.SEMICOLON);
+        this.oO.addInstruction(new InstructionNone(InstructionType.Ret));
     }
 
     /**
@@ -432,6 +530,14 @@ public class Analyser {
             DType rightType = analyseTerm();
             TypeChecker.typeCheck(leftType, rightType, token.getStartPos());
             leftType = rightType;
+
+            //生成加法或者减法指令
+            if(token.getTokenType() == TokenType.PLUS) {
+                this.oO.addInstruction(new InstructionNone(InstructionType.AddI));
+            }
+            else if(token.getTokenType() == TokenType.MINUS) {
+                this.oO.addInstruction(new InstructionNone(InstructionType.SubI));
+            }
         }
 
         return leftType;
@@ -449,6 +555,15 @@ public class Analyser {
             Token token = it.next();
             DType rightType = analyseFactor();
             TypeChecker.typeCheck(leftType, rightType, token.getStartPos());
+
+            //生成乘法或者除法指令
+            if(token.getTokenType() == TokenType.MUL) {
+                this.oO.addInstruction(new InstructionNone(InstructionType.MulI));
+            }
+            else if(token.getTokenType() == TokenType.DIV) {
+                this.oO.addInstruction(new InstructionNone(InstructionType.DivI));
+            }
+
         }
 
         return leftType;
@@ -463,11 +578,16 @@ public class Analyser {
 
         DType dType = analyseAtom();
 
-        if(dType == DType.VOID) {
-            throw new AnalyzeError(ErrorCode.InvalidOpVoid, it.peekToken().getStartPos());
-        }
+
 
         while(it.check(TokenType.AS_KW)) {
+
+
+            //如果类型的左端是VOID则不可以转换
+            if(dType == DType.VOID) {
+                throw new AnalyzeError(ErrorCode.InvalidOpVoid, it.peekToken().getStartPos());
+            }
+
             it.expectToken(TokenType.AS_KW);      //吃掉as符号
             Token ty = it.next();
             if(ty.getTokenType()!=TokenType.INT&&ty.getTokenType()!=TokenType.DOUBLE) {         //as 只能接INT和DOUBLE
@@ -487,11 +607,17 @@ public class Analyser {
     public DType analyseAtom() throws CompileError {
 
         //如果存在'-'号
+        boolean isNeg = false;
         if(it.check(TokenType.MINUS)){
+            isNeg = true;
             it.next();          //吃掉负号
         }
+        DType dType = analyseItem();
 
-        return analyseItem();
+        if(isNeg) {
+            this.oO.addInstruction(new InstructionNone(InstructionType.NegI));
+        }
+        return dType;
     }
 
     /**
@@ -510,13 +636,18 @@ public class Analyser {
         }
         //对应 UINT_VALUE, 整型字面量
         else if(it.check(TokenType.UINT_VALUE)) {
-            it.expectToken(TokenType.UINT_VALUE);
+            Token uint = it.expectToken(TokenType.UINT_VALUE);
             dType = DType.INT;
+
+            //生成指令
+            this.oO.addInstruction(new InstructionU64(InstructionType.Push, (long)(int) uint.getValue()));
         }
         //对应DOUBLE_VALUE，浮点型字面量
         else if(it.check(TokenType.DOUBLE_VALUE)) {
-            it.expectToken(TokenType.DOUBLE_VALUE);
+            Token doubleValue = it.expectToken(TokenType.DOUBLE_VALUE);
             dType = DType.DOUBLE;
+            //生成指令
+            this.oO.addInstruction(new InstructionU64(InstructionType.Push, (long) doubleValue.getValue()));
         }
         //对应剩下的三个，其前缀相同
         else if(it.check(TokenType.IDENT)) {
@@ -542,9 +673,16 @@ public class Analyser {
 
         Token identToken = it.expectToken(TokenType.IDENT);
 
+        boolean isLib = false;
         Symbol symbol = this.symbolTable.findAllSymbol(identToken.getValueString());
         if(symbol == null) {
-            throw new AnalyzeError(ErrorCode.NotDeclared, identToken.getStartPos());
+            if ((symbol=Lib.genLibFunc(identToken.getValueString(), identToken.getStartPos(), this.oO)) == null){
+                throw new AnalyzeError(ErrorCode.NotDeclared, identToken.getStartPos());
+            } else {
+
+                //函数调用是一个lib函数
+                isLib = true;
+            }
         }
         DType leftType = symbol.getdType();
 
@@ -555,9 +693,24 @@ public class Analyser {
             if(symbol.getSymbolType() == SymbolType.CONST) {
                 throw new AnalyzeError(ErrorCode.AssignToConstant, assign.getStartPos());
             }
-            DType rightType = analyseExpr();
-            TypeChecker.typeCheck(leftType, rightType, assign.getStartPos());
+            if(symbol.getSymbolType() != SymbolType.VARIABLE) {
+                throw new AnalyzeError(ErrorCode.AssignNotToVar, assign.getStartPos());
+            }
+            assert symbol instanceof VarSymbol;
+            VarSymbol varSymbol = (VarSymbol) symbol;
 
+            //生成加载和存储指令
+            if(varSymbol.isGlobal()) {
+                this.oO.addInstruction(new InstructionU32(InstructionType.GlobA, varSymbol.getOffset()));
+            } else if(varSymbol.isParam()) {
+                this.oO.addInstruction(new InstructionU32(InstructionType.ArgA, varSymbol.getOffset()));
+            } else {
+                this.oO.addInstruction(new InstructionU32(InstructionType.LocA, varSymbol.getOffset()));
+            }
+            DType rightType = analyseExpr();
+            this.oO.addInstruction(new InstructionNone(InstructionType.Store64));
+
+            TypeChecker.typeCheck(leftType, rightType, assign.getStartPos());
             //赋值语句的类型是void
             return DType.VOID;
         }
@@ -566,21 +719,61 @@ public class Analyser {
         // 函数调用语句
         else if(it.check(TokenType.L_PAREN)) {
 
+
             //如果这个函数不是一个标识符号
             if(symbol.getSymbolType()!=SymbolType.FUNC) {
                 throw new AnalyzeError(ErrorCode.NotDeclared, identToken.getStartPos());
             }
+            assert symbol instanceof FuncSymbol;
+            FuncSymbol funcSymbol = (FuncSymbol) symbol;
+
+            //压入返回值slot
+            if(funcSymbol.getdType()!=DType.VOID) {
+                this.oO.addInstruction(new InstructionU32(InstructionType.StackAlloc, (int)1));
+            }
+
+
             it.expectToken(TokenType.L_PAREN);
+
+            ArrayList argsList = new ArrayList();
             if(it.check(TokenType.L_PAREN) || it.check(TokenType.MINUS) ||
                 it.check(TokenType.UINT_VALUE) || it.check(TokenType.STRING_VALUE) ||
                 it.check(TokenType.DOUBLE_VALUE) || it.check(TokenType.IDENT)) {
 
-                analyseCallParam((FuncSymbol) symbol, identToken);
+                argsList = analyseCallParam((FuncSymbol) symbol, identToken);
             }
+            TypeChecker.callArgTypeCheck(funcSymbol, argsList, identToken);
+
+            //如果调用的是库函数
+            if (isLib) {
+                this.oO.addInstruction(new InstructionU32(InstructionType.CallName, (int)funcSymbol.getOffset()));
+            }
+            else {
+                this.oO.addInstruction(new InstructionU32(InstructionType.Call, (int)funcSymbol.getOffset()));
+            }
+
             it.expectToken(TokenType.R_PAREN);
+            return leftType;
         }
 
-        return leftType;
+
+        //只是一个IDENT
+        else {
+            //生成指令，将变量的的值放在栈顶，其位置由符号表存储
+            assert symbol instanceof VarSymbol;
+            VarSymbol varSymbol = (VarSymbol) symbol;
+            if(varSymbol.isGlobal()) {
+                this.oO.addInstruction(new InstructionU32(InstructionType.GlobA, (int)varSymbol.getOffset()));
+            }
+            else if(varSymbol.isParam()) {
+                this.oO.addInstruction(new InstructionU32(InstructionType.ArgA, (int)varSymbol.getOffset()));
+            }
+            else{
+                this.oO.addInstruction(new InstructionU32(InstructionType.LocA, (int)varSymbol.getOffset()));
+            }
+            this.oO.addInstruction(new InstructionNone(InstructionType.Load64));
+            return  leftType;
+        }
     }
 
 
@@ -589,9 +782,10 @@ public class Analyser {
      * 然后检查函数调用的参数是否相同。
      * @param  funcSymbol 函数的符号，用来获取参数信息
      * @param funcToken 函数的Token， 用来获取位置报错
+     * @return ArrayList 用来返回调用参数，交给上层检查
      * @throws CompileError
      */
-    public void analyseCallParam(FuncSymbol funcSymbol, Token funcToken) throws CompileError {
+    public ArrayList analyseCallParam(FuncSymbol funcSymbol, Token funcToken) throws CompileError {
         //实际参数的类型表
         ArrayList<DType> actualArgList = new ArrayList<>();
         DType dType = analyseExpr();
@@ -601,8 +795,6 @@ public class Analyser {
             dType = analyseExpr();
             actualArgList.add(dType);
         }
-        TypeChecker.callArgTypeCheck(funcSymbol, actualArgList, funcToken);
-
-        return;
+        return actualArgList;
     }
 }
