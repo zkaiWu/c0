@@ -39,8 +39,6 @@ public class Lib {
         if(lib.get(funcName)==null) {
             return null;
         }
-
-        System.out.println(funcName);
         int offset = oO.addLibFunc(funcName);
 
         //如果这个函数是getint
@@ -78,7 +76,7 @@ public class Lib {
         //putstr
         if(funcName.contentEquals("putstr")) {
             FuncSymbol putStr = new FuncSymbol(funcName, SymbolType.FUNC, DType.VOID, offset, pos);
-            putStr.addArgs(new VarSymbol("param",SymbolType.VARIABLE, DType.INT, offset, pos));
+            putStr.addArgs(new VarSymbol("param",SymbolType.VARIABLE, DType.STRING, offset, pos));
             return  putStr;
         }
         //putln

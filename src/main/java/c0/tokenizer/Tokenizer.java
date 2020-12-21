@@ -56,7 +56,11 @@ public class Tokenizer {
             return lexIdentOrKeyword();
         }else if(Character.isDigit(peek)){
             return lexUInt();
-        }else{
+        }else if(peek == '\''){
+            return lexChar();
+        }else if(peek == '\"'){
+            return lexString();
+        } else {
             return lexOpOrUnknown();
         }
     }
@@ -117,6 +121,83 @@ public class Tokenizer {
         return new Token(TokenType.UINT_VALUE, result, startPos, endPos);
     }
 
+
+    /**
+     * 解析字符串，其token为STRING_VALUE
+     * @return
+     * @throws TokenizeError
+     */
+    public Token lexString() throws  TokenizeError {
+
+
+        StringBuffer value = new StringBuffer();
+        Pos startPos = it.currentPos();
+
+
+        char temp = it.nextChar();
+        if(temp != '\"') throw new TokenizeError(ErrorCode.InvalidString, it.currentPos());
+        while((temp = it.nextChar())!='\"') {
+            if(it.isEOF()) {
+                throw new TokenizeError(ErrorCode.InvalidString, startPos);
+            }
+            if(temp == '\\') {
+                temp = it.nextChar();
+                if(it.isEOF()) {
+                    throw new TokenizeError(ErrorCode.InvalidString, startPos);
+                }
+                switch (temp) {
+                    case '\\': temp = '\\'; break;
+                    case '\'': temp = '\''; break;
+                    case '\"': temp = '\"'; break;
+                    case 'n': temp = '\n'; break;
+                    case 't': temp = '\t'; break;
+                    case 'r': temp = '\r'; break;
+                    default: throw new TokenizeError(ErrorCode.InvalidString, startPos);
+                }
+            }
+            value.append(temp);
+            if(it.isEOF()) {
+                throw new TokenizeError(ErrorCode.InvalidString, startPos);
+            }
+        }
+        Pos endPos = it.currentPos();
+        return new Token(TokenType.STRING_VALUE, value.toString(), startPos, endPos);
+    }
+
+    /**
+     * 解析一个字符,其token为CHAR
+     * @return
+     * @throws TokenizeError
+     */
+    public Token lexChar() throws  TokenizeError{
+        char value = 0;
+        Pos startPos = it.currentPos();
+
+        char temp = it.nextChar();
+        if(it.isEOF()) {
+            throw new TokenizeError(ErrorCode.InvalidChar, startPos);
+        }
+        value = it.nextChar();
+        if(it.isEOF() || value == '\'') {
+            throw new TokenizeError(ErrorCode.InvalidChar, startPos);
+        }
+        if(value == '\\') {
+            value = it.nextChar();
+            switch (value) {
+                case '\\': value = '\\'; break;
+                case '\'': value = '\''; break;
+                case '\"': value = '\"'; break;
+                case 'n': value = '\n'; break;
+                case 't': value = '\t'; break;
+                case 'r': value = '\r'; break;
+                default: throw new TokenizeError(ErrorCode.InvalidChar, startPos);
+            }
+        }
+        char c = it.nextChar();
+        if(c != '\'') throw  new TokenizeError(ErrorCode.InvalidChar, startPos);
+        Pos endPos=it.currentPos();
+        return new Token(TokenType.CHAR, (int)value, startPos, endPos);
+    }
 
 
     /**

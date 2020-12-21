@@ -1,5 +1,6 @@
 package c0.analyser;
 
+import c0.analyser.returnChecker.BranchStack;
 import c0.error.AnalyzeError;
 import c0.error.CompileError;
 import c0.error.ErrorCode;
@@ -23,6 +24,8 @@ public class Analyser {
     SymbolTable symbolTable;
     //用于Type类型之间的映射，不然手写判断可太蠢了
     Map<TokenType, DType> typeMap;
+    //用于返回分支及其类型的检查
+    BranchStack branchStack;
     //oO文件，在分析时填充
     OoFile oO;
 
@@ -32,6 +35,7 @@ public class Analyser {
         symbolTable = new SymbolTable();
         typeMap = new HashMap<>();
         oO = new OoFile();
+        branchStack = new BranchStack();
     }
 
 
@@ -261,10 +265,16 @@ public class Analyser {
         //将这个函数写入oOfile中
         this.oO.addFunction(funcSymbol);
 
+
+
+        this.branchStack.addFnBranch(funcReturnType);
         //开始分析块语句
         analyseBlockStmt(funcSymbol);
+        boolean needRet = this.branchStack.quitFunc(fnIdent.getStartPos());
 
-        this.oO.addInstruction(new InstructionNone(InstructionType.Ret));
+        if(needRet) {
+            this.oO.addInstruction(new InstructionNone(InstructionType.Ret));
+        }
     }
 
     /**
@@ -422,9 +432,11 @@ public class Analyser {
      * @throws CompileError
      */
     public void analyseWhileStmt() throws  CompileError {
-        it.expectToken(TokenType.WHILE_KW);
+        Token whileToken = it.expectToken(TokenType.WHILE_KW);
         analyseExpr();
+        this.branchStack.addWhileBranch();
         analyseBlockStmt(null);
+        this.branchStack.quitBranch(whileToken.getStartPos());
     }
 
 
@@ -433,15 +445,21 @@ public class Analyser {
      * @throws CompileError
      */
     public void analyseIfStmt() throws  CompileError {
-        it.expectToken(TokenType.IF_KW);
+        Token ifToken = it.expectToken(TokenType.IF_KW);
         analyseExpr();
+
+        //向分支表中插入新的分支
+        this.branchStack.addIfBranch();
         analyseBlockStmt(null);
+        this.branchStack.quitBranch(ifToken.getStartPos());
         if(it.check(TokenType.ELSE_KW)) {
-            it.expectToken(TokenType.ELSE_KW);
+            Token elseToken = it.expectToken(TokenType.ELSE_KW);
             //接下来对应两个分支，分别是block_stmt以及if_stmt;
             if (it.check(TokenType.L_BRACE)) {
                 //这是block_stmt分支
+                this.branchStack.addElseBranch();
                 analyseBlockStmt(null);
+                this.branchStack.quitBranch(elseToken.getStartPos());
             }
             else if(it.peekToken().getTokenType() == TokenType.IF_KW) {
                 analyseIfStmt();
@@ -459,8 +477,10 @@ public class Analyser {
      * @throws CompileError
      */
     public void analyseReturnStmt() throws CompileError {
-        it.expectToken(TokenType.RETURN_KW);
+        Token re = it.expectToken(TokenType.RETURN_KW);
         Token token = it.peekToken();
+        DType dType = DType.VOID;
+
         if(token.getTokenType()==TokenType.MINUS || token.getTokenType()==TokenType.IDENT ||
             token.getTokenType() == TokenType.UINT_VALUE || token.getTokenType() == TokenType.STRING_VALUE ||
             token.getTokenType() == TokenType.DOUBLE_VALUE) {
@@ -468,9 +488,10 @@ public class Analyser {
 
             //有返回值,将返回值的地址放在Args[0]处
             this.oO.addInstruction(new InstructionU32(InstructionType.ArgA,(int) 0));
-            analyseExpr();
+            dType = analyseExpr();
             this.oO.addInstruction(new InstructionNone(InstructionType.Store64));
         }
+        this.branchStack.returnOnce(dType,re.getStartPos());
 
         it.expectToken(TokenType.SEMICOLON);
         this.oO.addInstruction(new InstructionNone(InstructionType.Ret));
@@ -608,13 +629,15 @@ public class Analyser {
 
         //如果存在'-'号
         boolean isNeg = false;
+        Token token = null;
         if(it.check(TokenType.MINUS)){
             isNeg = true;
-            it.next();          //吃掉负号
+            token = it.next();          //吃掉负号
         }
         DType dType = analyseItem();
 
         if(isNeg) {
+            if(dType!=DType.INT&&dType!=DType.DOUBLE) throw new AnalyzeError(ErrorCode.InvalidExpr, token.getStartPos());
             this.oO.addInstruction(new InstructionNone(InstructionType.NegI));
         }
         return dType;
@@ -648,6 +671,14 @@ public class Analyser {
             dType = DType.DOUBLE;
             //生成指令
             this.oO.addInstruction(new InstructionU64(InstructionType.Push, (long) doubleValue.getValue()));
+        }
+        //对应STRING_VALUE, 字符串型字面量
+        else if(it.check(TokenType.STRING_VALUE)) {
+            Token stringValue = it.expectToken(TokenType.STRING_VALUE);
+            dType = DType.STRING;
+            //装入全局变量中
+            int offset = this.oO.addGlobStr(stringValue.getValueString());
+            this.oO.addInstruction(new InstructionU64(InstructionType.Push,(long) offset));
         }
         //对应剩下的三个，其前缀相同
         else if(it.check(TokenType.IDENT)) {
@@ -730,6 +761,8 @@ public class Analyser {
             //压入返回值slot
             if(funcSymbol.getdType()!=DType.VOID) {
                 this.oO.addInstruction(new InstructionU32(InstructionType.StackAlloc, (int)1));
+            } else {
+                this.oO.addInstruction(new InstructionU32(InstructionType.StackAlloc, (int)0));
             }
 
 

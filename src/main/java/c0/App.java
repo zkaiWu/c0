@@ -71,6 +71,17 @@ public class App<scanner> {
         Scanner scanner = new Scanner(input);
         var iter = new StringIter(scanner);
         var tokenizer = new Tokenizer(iter);
+//        try {
+//            Token temp = null;
+//            while((temp=tokenizer.nextToken()).getTokenType()!=TokenType.EOF) {
+//                output.println(temp);
+//            }
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            System.exit(-1);
+//        }
+
+
         var symbolIter = new SymbolIter(tokenizer);
         var analyse = new Analyser(symbolIter);
 
@@ -81,9 +92,9 @@ public class App<scanner> {
             // 遇到错误不输出，直接退出
             e.printStackTrace();
             System.exit(-1);
-            return;
         }
     }
+
 
 
     private static ArgumentParser buildArgparse() {

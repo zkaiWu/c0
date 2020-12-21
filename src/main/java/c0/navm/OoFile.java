@@ -107,6 +107,13 @@ public class OoFile {
         return this.globals.size()-1;
     }
 
+    public int addGlobStr(String str) {
+        char isConst = (char)0x01;
+        GlobalDef globalDef = new GlobalDef(isConst, str);
+        this.globals.add(globalDef);
+        return this.globals.size()-1;
+    }
+
 
     /**
      * 为函数增加一个局部变量，并返回其偏移
@@ -151,7 +158,6 @@ public class OoFile {
      */
     public void writeDebug(PrintStream output) {
 
-        System.out.println("start print");
         //打印全局变量
         for(int i=0 ;i<this.globals.size(); i++ ) {
             output.print("static : ");
