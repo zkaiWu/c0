@@ -88,8 +88,6 @@ public class App<scanner> {
 //            e.printStackTrace();
 //            System.exit(-1);
 //        }
-
-
         var symbolIter = new SymbolIter(tokenizer);
         var analyse = new Analyser(symbolIter);
 
@@ -102,7 +100,6 @@ public class App<scanner> {
                 System.out.printf("0x%x ", (int)by);
                 output.writeByte((int)by);
             }
-
         } catch (Exception e) {
             // 遇到错误不输出，直接退出
             e.printStackTrace();

@@ -12,14 +12,14 @@ c0/symbolTable/SymbolTable.java
  c0.symbolTable.SymbolTable
 c0/tokenizer/Token.java
  c0.tokenizer.Token
-c0/analyser/SymbolIter.java
- c0.analyser.SymbolIter
+c0/navm/instruction/Instruction.java
+ c0.navm.instruction.Instruction
 c0/tokenizer/StringIter.java
  c0.tokenizer.StringIter
 c0/navm/instruction/InstructionType.java
  c0.navm.instruction.InstructionType
-c0/tokenizer/Tokenizer.java
- c0.tokenizer.Tokenizer
+c0/navm/Lib.java
+ c0.navm.Lib
 c0/error/AnalyzeError.java
  c0.error.AnalyzeError
 c0/analyser/returnChecker/BranchStack.java
@@ -58,14 +58,14 @@ c0/navm/GlobalDef.java
  c0.navm.GlobalDef
 c0/navm/instruction/InstructionU32.java
  c0.navm.instruction.InstructionU32
+c0/navm/OoFile.java
+ c0.navm.OoFile
+c0/analyser/SymbolIter.java
+ c0.analyser.SymbolIter
+c0/App.java
+ c0.App
+c0/tokenizer/Tokenizer.java
+ c0.tokenizer.Tokenizer
 c0/analyser/Analyser.java
  c0.analyser.Analyser
  c0.analyser.Analyser$1
-c0/navm/OoFile.java
- c0.navm.OoFile
-c0/navm/Lib.java
- c0.navm.Lib
-c0/navm/instruction/Instruction.java
- c0.navm.instruction.Instruction
-c0/App.java
- c0.App

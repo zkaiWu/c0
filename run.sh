@@ -9,4 +9,4 @@ fi
 #read input
 #echo "output file is"
 #read output
-java -ea -jar ./build/libs/c0.jar input.txt -o output.txt
+java -ea -jar ./build/libs/c0.jar input.txt -o output

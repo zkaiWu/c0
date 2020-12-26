@@ -60,6 +60,8 @@ public class Tokenizer {
             return lexChar();
         }else if(peek == '\"'){
             return lexString();
+        } else if(peek == '/'){
+            return lexComment();
         } else {
             return lexOpOrUnknown();
         }
@@ -197,6 +199,23 @@ public class Tokenizer {
         if(c != '\'') throw  new TokenizeError(ErrorCode.InvalidChar, startPos);
         Pos endPos=it.currentPos();
         return new Token(TokenType.CHAR, (int)value, startPos, endPos);
+    }
+
+    /**
+     * 解析注释，读到行尾，然后重新调用nextToken返回下一个Token
+     * @return
+     * @throws TokenizeError
+     */
+    public Token lexComment() throws TokenizeError{
+        it.nextChar();
+        char temp = it.nextChar();
+        if(temp!='/') {
+            throw new TokenizeError(ErrorCode.InvalidChar, it.currentPos());
+        }
+        while(!it.isEOF()&&it.peekChar()!='\n') {
+            it.nextChar();
+        }
+        return nextToken();
     }
 
 
