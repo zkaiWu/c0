@@ -3,6 +3,7 @@ package c0.navm;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 public class GlobalDef {
     // 是否为常量？非零值视为真
@@ -58,11 +59,15 @@ public class GlobalDef {
      * @param output
      * @throws IOException
      */
-    public void toAssemble(DataOutputStream output) throws IOException {
-        output.write(Assembler.char2Byte(this.isConst));
-        output.write(Assembler.int2Byte(this.value.size()));
+    public void toAssemble(List<Byte> byteList) throws IOException {
+        byte by = Assembler.char2Byte(this.isConst);
+        byteList.add(by);
+        byte []bytes = Assembler.int2Byte(this.value.size());
+        for(int i=0;i<bytes.length;i++){
+            byteList.add(bytes[i]);
+        }
         for(Character ch: this.value) {
-            output.write(Assembler.char2Byte(ch));
+            byteList.add(Assembler.char2Byte(ch));
         }
         return;
     }

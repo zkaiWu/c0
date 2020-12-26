@@ -2,6 +2,7 @@ package c0.navm.instruction;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.List;
 
 public class Instruction {
 
@@ -33,7 +34,7 @@ public class Instruction {
         return this.getInstructionType().toString();
     }
 
-    public void toAssemble(DataOutputStream output) throws IOException {
+    public void toAssemble(List<Byte> byteList) throws IOException {
         System.err.println("Instruction to Assemble function can not be used");
         return;
     }

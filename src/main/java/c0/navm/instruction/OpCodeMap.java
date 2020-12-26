@@ -14,7 +14,7 @@ public class OpCodeMap {
         opCodeMap.put(InstructionType.Nop, (char)0x00);
         opCodeMap.put(InstructionType.Push, (char)0x01);
         opCodeMap.put(InstructionType.Pop, (char)0x02);
-        opCodeMap.put(InstructionType.PopN, (char)0x00);
+        opCodeMap.put(InstructionType.PopN, (char)0x03);
         opCodeMap.put(InstructionType.Dup, (char)0x04);
         opCodeMap.put(InstructionType.LocA, (char)0x0a);
         opCodeMap.put(InstructionType.ArgA, (char)0x0b);

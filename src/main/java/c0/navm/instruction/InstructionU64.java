@@ -4,6 +4,7 @@ import c0.navm.Assembler;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.List;
 
 public class InstructionU64 extends Instruction{
 
@@ -29,8 +30,12 @@ public class InstructionU64 extends Instruction{
     }
 
     @Override
-    public void toAssemble(DataOutputStream output) throws IOException {
-        output.write(Assembler.char2Byte(this.getOpCode()));
-        output.write(Assembler.long2Byte(this.getParam()));
+    public void toAssemble(List<Byte> byteList) throws IOException {
+        byte by = Assembler.char2Byte(this.getOpCode());
+        byteList.add(by);
+        byte []bytes = Assembler.long2Byte(this.getParam());
+        for(int i=0;i<bytes.length;i++ ){
+            byteList.add(bytes[i]);
+        }
     }
 }

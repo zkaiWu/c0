@@ -12,6 +12,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 用来模拟oO的二进制文件
@@ -204,23 +205,33 @@ public class OoFile {
     }
 
 
-    public void toAssemble(DataOutputStream output) throws IOException {
+    public void toAssemble(List<Byte> byteList) throws IOException {
 
         //写入模数
         byte[] magicNum = {0x72,0x30,0x3b,0x3e};
-        output.write(magicNum);
+        for(int i=0; i<4; i++){
+            byteList.add(magicNum[i]);
+        }
         //写入版本号
         byte[] version = {0x00, 0x00, 0x00, 0x01};
-        output.write(version);
+        for(int i=0; i<4; i++){
+            byteList.add(version[i]);
+        }
         //写入全局变量的个数
         byte[] globalCount = Assembler.int2Byte(this.globals.size());
-        output.write(globalCount);
+        for(int i=0; i<globalCount.length; i++) {
+            byteList.add(globalCount[i]);
+        }
         //写入每一个全局变量
         for(GlobalDef globalDef: this.globals) {
-            globalDef.toAssemble(output);
+            globalDef.toAssemble(byteList);
+        }
+        byte[] funcCount = Assembler.int2Byte(this.functions.size());
+        for(int i=0; i<globalCount.length; i++) {
+            byteList.add(funcCount[i]);
         }
         for(FunctionDef functionDef: this.functions) {
-            functionDef.toAssemble(output);
+            functionDef.toAssemble(byteList);
         }
     }
 }

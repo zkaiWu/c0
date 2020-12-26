@@ -96,7 +96,13 @@ public class App<scanner> {
         try {
             OoFile ooFile = analyse.analyse();
             ooFile.writeDebug(debugOutput);
-            ooFile.toAssemble(output);
+            List<Byte> byteList = new ArrayList<>();
+            ooFile.toAssemble(byteList);
+            for(byte by: byteList) {
+                System.out.printf("0x%x ", (int)by);
+                output.writeByte((int)by);
+            }
+
         } catch (Exception e) {
             // 遇到错误不输出，直接退出
             e.printStackTrace();

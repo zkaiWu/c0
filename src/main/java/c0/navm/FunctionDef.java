@@ -7,6 +7,7 @@ import c0.navm.instruction.InstructionU32;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 public class FunctionDef {
 
@@ -121,14 +122,29 @@ public class FunctionDef {
     }
 
 
-    public void toAssemble(DataOutputStream output) throws IOException{
-        output.write(Assembler.int2Byte(this.position));
-        output.write(Assembler.int2Byte(this.returnSlot));
-        output.write(Assembler.int2Byte(this.paramSlot));
-        output.write(Assembler.int2Byte(this.locSlot));
-        output.write(Assembler.int2Byte(this.body.size()));
+    public void toAssemble(List<Byte> byteList) throws IOException{
+        byte []bytes = Assembler.int2Byte(this.position);
+        for(int i=0;i<bytes.length;i++){
+            byteList.add(bytes[i]);
+        }
+        bytes = Assembler.int2Byte(this.returnSlot);
+        for(int i=0;i<bytes.length;i++){
+            byteList.add(bytes[i]);
+        }
+        bytes = Assembler.int2Byte(this.paramSlot);
+        for(int i=0;i<bytes.length;i++){
+            byteList.add(bytes[i]);
+        }
+        bytes = Assembler.int2Byte(this.locSlot);
+        for(int i=0;i<bytes.length;i++){
+            byteList.add(bytes[i]);
+        }
+        bytes = Assembler.int2Byte(this.body.size());
+        for(int i=0;i<bytes.length;i++){
+            byteList.add(bytes[i]);
+        }
         for(Instruction instruction: this.body) {
-            instruction.toAssemble(output);
+            instruction.toAssemble(byteList);
         }
     }
 
