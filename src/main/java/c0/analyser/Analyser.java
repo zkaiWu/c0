@@ -483,7 +483,7 @@ public class Analyser {
 
         if(token.getTokenType()==TokenType.MINUS || token.getTokenType()==TokenType.IDENT ||
             token.getTokenType() == TokenType.UINT_VALUE || token.getTokenType() == TokenType.STRING_VALUE ||
-            token.getTokenType() == TokenType.DOUBLE_VALUE) {
+            token.getTokenType() == TokenType.DOUBLE_VALUE || token.getTokenType() == TokenType.L_PAREN) {
 
 
             //有返回值,将返回值的地址放在Args[0]处

@@ -60,9 +60,9 @@ c0/navm/OoFile.java
  c0.navm.OoFile
 c0/navm/Lib.java
  c0.navm.Lib
-c0/App.java
- c0.App
 c0/analyser/returnChecker/BranchStack.java
  c0.analyser.returnChecker.BranchStack
+c0/App.java
+ c0.App
 c0/analyser/Analyser.java
  c0.analyser.Analyser
