@@ -49,10 +49,12 @@ public class Lib {
         //如果这个函数是getdouble
         if(funcName.contentEquals("getdouble")) {
             FuncSymbol getDouble = new FuncSymbol(funcName, SymbolType.FUNC, DType.DOUBLE, offset, pos);
+            return getDouble;
         }
         //如果这个函数是getchar
         if(funcName.contentEquals("getchar")) {
             FuncSymbol getChar = new FuncSymbol(funcName, SymbolType.FUNC, DType.INT, offset, pos);
+            return getChar;
         }
         //如果这个函数是putint
         if(funcName.contentEquals("putint")) {

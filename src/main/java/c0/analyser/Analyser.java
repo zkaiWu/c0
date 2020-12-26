@@ -783,7 +783,6 @@ public class Analyser {
             if ((symbol=Lib.genLibFunc(identToken.getValueString(), identToken.getStartPos(), this.oO)) == null){
                 throw new AnalyzeError(ErrorCode.NotDeclared, identToken.getStartPos());
             } else {
-
                 //函数调用是一个lib函数
                 isLib = true;
             }
