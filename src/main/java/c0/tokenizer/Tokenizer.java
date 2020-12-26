@@ -208,10 +208,11 @@ public class Tokenizer {
      */
     public Token lexComment() throws TokenizeError{
         it.nextChar();
-        char temp = it.nextChar();
+        char temp = it.peekChar();
         if(temp!='/') {
-            throw new TokenizeError(ErrorCode.InvalidChar, it.currentPos());
+            return new Token(TokenType.DIV, "/", it.previousPos(), it.currentPos());
         }
+        it.nextChar();
         while(!it.isEOF()&&it.peekChar()!='\n') {
             it.nextChar();
         }
