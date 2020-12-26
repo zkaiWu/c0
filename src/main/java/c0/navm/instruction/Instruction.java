@@ -1,5 +1,8 @@
 package c0.navm.instruction;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
+
 public class Instruction {
 
     private char opCode;
@@ -28,5 +31,10 @@ public class Instruction {
 
     public String debugString() {
         return this.getInstructionType().toString();
+    }
+
+    public void toAssemble(DataOutputStream output) throws IOException {
+        System.err.println("Instruction to Assemble function can not be used");
+        return;
     }
 }

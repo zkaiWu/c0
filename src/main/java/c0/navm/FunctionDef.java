@@ -2,7 +2,10 @@ package c0.navm;
 
 
 import c0.navm.instruction.Instruction;
+import c0.navm.instruction.InstructionU32;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 
 public class FunctionDef {
@@ -30,12 +33,34 @@ public class FunctionDef {
     }
 
 
-    public void addInstruction(Instruction instruction){
+    public int addInstruction(Instruction instruction){
+        int offset = this.body.size();
         this.body.add(instruction);
+        return offset;
     }
 
     public int addLocVar() {
         return this.locSlot ++ ;
+    }
+
+
+    /**
+     * 用来在br回填参数的时候使用
+     * @param offset
+     * @param num
+     */
+    public void modInstructionU32(int offset, int num) {
+        InstructionU32 instructionU32  = (InstructionU32)this.body.get(offset);
+        instructionU32.setParam(num);
+        return;
+    }
+
+    /**
+     * 返回最后一条指令在这个函数里的偏移
+     * @return 最后一条指令的偏移
+     */
+    public int getCurOffset() {
+        return this.body.size()-1;
     }
 
 
@@ -93,6 +118,18 @@ public class FunctionDef {
 
     public void setFuncPosition(int funcPosition) {
         this.funcPosition = funcPosition;
+    }
+
+
+    public void toAssemble(DataOutputStream output) throws IOException{
+        output.write(Assembler.int2Byte(this.position));
+        output.write(Assembler.int2Byte(this.returnSlot));
+        output.write(Assembler.int2Byte(this.paramSlot));
+        output.write(Assembler.int2Byte(this.locSlot));
+        output.write(Assembler.int2Byte(this.body.size()));
+        for(Instruction instruction: this.body) {
+            instruction.toAssemble(output);
+        }
     }
 
 

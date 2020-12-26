@@ -12,9 +12,7 @@ import c0.tokenizer.Token;
 import c0.tokenizer.TokenType;
 import c0.util.Pos;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class Analyser {
 
@@ -24,6 +22,8 @@ public class Analyser {
     SymbolTable symbolTable;
     //用于Type类型之间的映射，不然手写判断可太蠢了
     Map<TokenType, DType> typeMap;
+    //用于br的回填
+    Stack<Integer> brStack;
     //用于返回分支及其类型的检查
     BranchStack branchStack;
     //oO文件，在分析时填充
@@ -36,6 +36,7 @@ public class Analyser {
         typeMap = new HashMap<>();
         oO = new OoFile();
         branchStack = new BranchStack();
+        brStack = new Stack<>();
     }
 
 
@@ -322,7 +323,6 @@ public class Analyser {
                                             0,
                                             fnParam.getStartPos());
 
-
         return varSymbol;
     }
 
@@ -399,11 +399,15 @@ public class Analyser {
         if(funcSymbol!=null) {
             int agrsSize = funcSymbol.getArgsList().size();
             ArrayList<VarSymbol> funcParams = funcSymbol.getArgsList();
+            int argOffset = 0;
+            if(funcSymbol.getdType() != DType.VOID) {
+                argOffset = 1;
+            }
             for (int i = 0; i < agrsSize; i++) {
                 //是一个参数
                 VarSymbol funcParam = funcParams.get(i);
                 funcParam.setParam(true);
-                funcParam.setOffset(i+1);
+                funcParam.setOffset(i+argOffset);
                 this.symbolTable.insertSymbol(funcParam);
             }
         }
@@ -433,9 +437,16 @@ public class Analyser {
      */
     public void analyseWhileStmt() throws  CompileError {
         Token whileToken = it.expectToken(TokenType.WHILE_KW);
+        int startOffset = this.oO.addInstruction(new InstructionU32(InstructionType.Br, (int)0));
         analyseExpr();
+        this.oO.addInstruction(new InstructionU32(InstructionType.BrTrue, (int)1));
+        int falseOffset = this.oO.addInstruction(new InstructionU32(InstructionType.Br, (int)0));
         this.branchStack.addWhileBranch();
         analyseBlockStmt(null);
+        int loopOffset = this.oO.addInstruction(new InstructionU32(InstructionType.Br, (int)0));
+        this.oO.modInstructionU32(loopOffset, startOffset-loopOffset);
+        this.oO.modInstructionU32(falseOffset, loopOffset-falseOffset);
+
         this.branchStack.quitBranch(whileToken.getStartPos());
     }
 
@@ -445,21 +456,34 @@ public class Analyser {
      * @throws CompileError
      */
     public void analyseIfStmt() throws  CompileError {
+
         Token ifToken = it.expectToken(TokenType.IF_KW);
         analyseExpr();
+
+        this.oO.addInstruction(new InstructionU32(InstructionType.BrTrue, (int)1));
+        int falseBrOffset = this.oO.addInstruction(new InstructionU32(InstructionType.Br, (int)0));             //注意此参数将来回填
+        this.brStack.push(falseBrOffset);
 
         //向分支表中插入新的分支
         this.branchStack.addIfBranch();
         analyseBlockStmt(null);
         this.branchStack.quitBranch(ifToken.getStartPos());
+        int trueBrOffset = this.oO.addInstruction(new InstructionU32(InstructionType.Br, (int)0));
+
+
+
         if(it.check(TokenType.ELSE_KW)) {
             Token elseToken = it.expectToken(TokenType.ELSE_KW);
+            //回填falseBrOffset, 并标记为已经修改
+            this.oO.modInstructionU32(falseBrOffset, this.oO.getCurOffset()-falseBrOffset);
+            falseBrOffset = -1;
             //接下来对应两个分支，分别是block_stmt以及if_stmt;
             if (it.check(TokenType.L_BRACE)) {
                 //这是block_stmt分支
                 this.branchStack.addElseBranch();
                 analyseBlockStmt(null);
                 this.branchStack.quitBranch(elseToken.getStartPos());
+                //回填br的参数
             }
             else if(it.peekToken().getTokenType() == TokenType.IF_KW) {
                 analyseIfStmt();
@@ -467,7 +491,17 @@ public class Analyser {
             else {
                 throw new AnalyzeError(ErrorCode.UnExpectToken, it.peekToken().getStartPos());
             }
+            //分析else完毕，产生一个br
+            int elseBrOffset = this.oO.addInstruction(new InstructionU32(InstructionType.Br, (int)0));
         }
+
+        //回填falseBrOffset
+        if(falseBrOffset!=-1) {
+            this.oO.modInstructionU32(falseBrOffset, this.oO.getCurOffset()-falseBrOffset);
+            falseBrOffset = -1;
+        }
+        //回填trueBrOffset
+        this.oO.modInstructionU32(trueBrOffset, this.oO.getCurOffset()-trueBrOffset);
         return ;
     }
 
@@ -502,7 +536,11 @@ public class Analyser {
      * @throws CompileError
      */
     public void analyseExprStmt() throws CompileError {
-        analyseExpr();
+        DType dType = analyseExpr();
+        System.out.println(dType);
+        if(dType != DType.VOID) {
+            this.oO.addInstruction(new InstructionU32(InstructionType.PopN, (int)1));
+        }
         it.expectToken(TokenType.SEMICOLON);
     }
 
@@ -534,8 +572,43 @@ public class Analyser {
             Token compare = it.next();
             DType rightType = analyseCond();
             TypeChecker.typeCheck(leftType, rightType, compare.getStartPos());
-        }
 
+            if(leftType == DType.INT) {
+                this.oO.addInstruction(new InstructionNone(InstructionType.CmpI));
+            }
+
+            switch (token.getTokenType()) {
+                case EQ: {
+                    this.oO.addInstruction(new InstructionNone(InstructionType.Not));
+                    break;
+                }
+                case NEQ: {
+                    break;
+                }
+                case LT: {
+                    this.oO.addInstruction(new InstructionNone(InstructionType.SetLt));
+                    break;
+                }
+                case GT: {
+                    this.oO.addInstruction(new InstructionNone(InstructionType.SetGt));
+                    break;
+                }
+                case LE: {
+                    this.oO.addInstruction(new InstructionNone(InstructionType.SetGt));
+                    this.oO.addInstruction(new InstructionNone(InstructionType.Not));
+                    break;
+                }
+                case GE: {
+                    this.oO.addInstruction(new InstructionNone(InstructionType.SetLt));
+                    this.oO.addInstruction(new InstructionNone(InstructionType.Not));
+                    break;
+                }
+                default:{
+                    break;
+                }
+            }
+            leftType = DType.VOID;
+        }
         return leftType;
     }
 
@@ -628,15 +701,15 @@ public class Analyser {
     public DType analyseAtom() throws CompileError {
 
         //如果存在'-'号
-        boolean isNeg = false;
+        int isNeg = 0;
         Token token = null;
-        if(it.check(TokenType.MINUS)){
-            isNeg = true;
+        while(it.check(TokenType.MINUS)){
+            isNeg++;
             token = it.next();          //吃掉负号
         }
         DType dType = analyseItem();
 
-        if(isNeg) {
+        for(;isNeg>0; isNeg--) {
             if(dType!=DType.INT&&dType!=DType.DOUBLE) throw new AnalyzeError(ErrorCode.InvalidExpr, token.getStartPos());
             this.oO.addInstruction(new InstructionNone(InstructionType.NegI));
         }

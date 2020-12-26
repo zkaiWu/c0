@@ -8,6 +8,8 @@ import c0.symbolTable.SymbolType;
 import c0.symbolTable.VarSymbol;
 import c0.util.Pos;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 
@@ -89,7 +91,7 @@ public class OoFile {
     }
 
     /**
-     * 将一个变量全局变量写入oO中，先不赋予初值，初值在_start函数中赋予
+     * 将一个变量全局变量写入oO中，先不赋予初值，初值在_start函数中赋予, 不管是整形还是浮点型，其长度为8
      * @param varSymbol
      * @return offset 返回全局变量的位置
      */
@@ -140,15 +142,32 @@ public class OoFile {
     /**
      * 向当前分析到的函数插入一条指令
      * @param instruction
+     * @return InstructionOffset 返回当前指令在这个函数中的偏移
      */
-    public void addInstruction(Instruction instruction) {
+    public int addInstruction(Instruction instruction) {
         FunctionDef curFunctionDef  = this.curFunctionDef();
-        curFunctionDef.addInstruction(instruction);
+        int offset = curFunctionDef.addInstruction(instruction);
+        return offset;
     }
 
     public void addStartInstruction(Instruction instruction) {
         FunctionDef startFunctionDef = this.functions.get(this._START_POSITION) ;
         startFunctionDef.addInstruction(instruction);
+    }
+
+    public void modInstructionU32(int offset, int num) {
+        FunctionDef curFunctionDef  = this.curFunctionDef();
+        curFunctionDef.modInstructionU32(offset, num);
+        return;
+    }
+
+    /**
+     * 获取当前最后一条指令在函数体中的偏移
+     * @return
+     */
+    public int getCurOffset() {
+        FunctionDef curFunctionDef = this.curFunctionDef();
+        return curFunctionDef.getCurOffset();
     }
 
 
@@ -182,5 +201,26 @@ public class OoFile {
             output.println("}");
         }
         return;
+    }
+
+
+    public void toAssemble(DataOutputStream output) throws IOException {
+
+        //写入模数
+        byte[] magicNum = {0x72,0x30,0x3b,0x3e};
+        output.write(magicNum);
+        //写入版本号
+        byte[] version = {0x00, 0x00, 0x00, 0x01};
+        output.write(version);
+        //写入全局变量的个数
+        byte[] globalCount = Assembler.int2Byte(this.globals.size());
+        output.write(globalCount);
+        //写入每一个全局变量
+        for(GlobalDef globalDef: this.globals) {
+            globalDef.toAssemble(output);
+        }
+        for(FunctionDef functionDef: this.functions) {
+            functionDef.toAssemble(output);
+        }
     }
 }

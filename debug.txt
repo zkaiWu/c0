@@ -1,0 +1,21 @@
+static : 5f 73 74 61 72 74 ('_start')
+static : 6d 61 69 6e ('main')
+static : 70 75 74 73 74 72 ('putstr')
+static : 3d 3d 3d 3d 3d 3d 3d 3d 3d 3d 3d 3d 3d a 7c 20 23 20 20 2f 5c 20 2b 20 22 20 7c a 7c 20 20 2f 3a 22 22 27 5c 5c 5e 7c 7c a 7c 2f 7c 5c 3f 22 27 2f 5c 20 20 21 7c a 7c 5c 72 20 5c 20 23 73 20 20 20 20 7c a 7c 5c 61 20 2f 5c 20 20 2f 5c 5c 76 7c a 3d 3d 3d 3d 3d 3d 3d 3d 3d 3d 3d 3d 3d ('=============
+| #  /\ + " |
+|  /:""'\\^||
+|/|\?"'/\  !|
+|\r \ #s    |
+|\a /\  /\\v|
+=============')
+fn [0] 0 0 -> 0 {
+    0: StackAlloc(1)
+    1: Call(1)
+    2: PopN(1)
+}
+fn [1] 1 0 -> 0 {
+    0: StackAlloc(0)
+    1: Push(3)
+    2: CallName(2)
+    3: Ret
+}

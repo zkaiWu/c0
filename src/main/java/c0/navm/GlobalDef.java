@@ -1,5 +1,7 @@
 package c0.navm;
 
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 
 public class GlobalDef {
@@ -48,5 +50,20 @@ public class GlobalDef {
 
     public void setValue(ArrayList<Character> value) {
         this.value = value;
+    }
+
+
+    /**
+     * 写入二进制文件
+     * @param output
+     * @throws IOException
+     */
+    public void toAssemble(DataOutputStream output) throws IOException {
+        output.write(Assembler.char2Byte(this.isConst));
+        output.write(Assembler.int2Byte(this.value.size()));
+        for(Character ch: this.value) {
+            output.write(Assembler.char2Byte(ch));
+        }
+        return;
     }
 }

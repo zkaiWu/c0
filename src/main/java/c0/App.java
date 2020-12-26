@@ -16,12 +16,7 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.io.PrintStream;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -39,6 +34,7 @@ public class App<scanner> {
 
         var inputFileName = result.getString("input");
         var outputFileName = result.getString("output");
+        var debugFileName = "debug.txt";
 
         InputStream input;
         if (inputFileName.equals("-")) {
@@ -54,18 +50,30 @@ public class App<scanner> {
             }
         }
 
-        PrintStream output;
-        if (outputFileName.equals("-")) {
-            output = System.out;
-        } else {
-            try {
-                output = new PrintStream(new FileOutputStream(outputFileName));
-            } catch (FileNotFoundException e) {
-                System.err.println("Cannot open output file.");
-                e.printStackTrace();
-                System.exit(2);
-                return;
-            }
+        PrintStream debugOutput;
+        debugOutput = System.out;
+//        if (outputFileName.equals("-")) {
+//            debugOutput = System.out;
+//        } else {
+//            try {
+//                debugOutput = new PrintStream(new FileOutputStream(debugFileName));
+//            } catch (FileNotFoundException e) {
+//                System.err.println("Cannot open output file.");
+//                e.printStackTrace();
+//                System.exit(2);
+//                return;
+//            }
+//        }
+
+
+        DataOutputStream output;
+        try {
+            output = new DataOutputStream(new FileOutputStream(outputFileName));
+        } catch (FileNotFoundException e) {
+            System.err.println("Cannot open output file.");
+            e.printStackTrace();
+            System.exit(2);
+            return;
         }
 
         Scanner scanner = new Scanner(input);
@@ -87,7 +95,8 @@ public class App<scanner> {
 
         try {
             OoFile ooFile = analyse.analyse();
-            ooFile.writeDebug(output);
+            ooFile.writeDebug(debugOutput);
+            ooFile.toAssemble(output);
         } catch (Exception e) {
             // 遇到错误不输出，直接退出
             e.printStackTrace();
