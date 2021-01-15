@@ -235,7 +235,7 @@ public class Tokenizer {
         char c = it.nextChar();
         if(c != '\'') throw  new TokenizeError(ErrorCode.InvalidChar, startPos);
         Pos endPos=it.currentPos();
-        return new Token(TokenType.UINT_VALUE, (int)value, startPos, endPos);
+        return new Token(TokenType.UINT_VALUE, (long)value, startPos, endPos);
     }
 
     /**
