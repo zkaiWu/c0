@@ -4,8 +4,8 @@ c0/util/Pos.java
  c0.util.Pos
 c0/error/AnalyzeError.java
  c0.error.AnalyzeError
-c0/navm/instruction/OpCodeMap.java
- c0.navm.instruction.OpCodeMap
+c0/navm/instruction/Instruction.java
+ c0.navm.instruction.Instruction
 c0/symbolTable/VarSymbol.java
  c0.symbolTable.VarSymbol
 c0/symbolTable/SymbolTable.java
@@ -36,8 +36,8 @@ c0/navm/instruction/InstructionNone.java
  c0.navm.instruction.InstructionNone
 c0/tokenizer/TokenType.java
  c0.tokenizer.TokenType
-c0/navm/instruction/Instruction.java
- c0.navm.instruction.Instruction
+c0/navm/instruction/OpCodeMap.java
+ c0.navm.instruction.OpCodeMap
 c0/symbolTable/SymbolType.java
  c0.symbolTable.SymbolType
 c0/analyser/returnChecker/BranchType.java
@@ -62,10 +62,10 @@ c0/error/CompileError.java
  c0.error.CompileError
 c0/analyser/SymbolIter.java
  c0.analyser.SymbolIter
-c0/tokenizer/Tokenizer.java
- c0.tokenizer.Tokenizer
 c0/App.java
  c0.App
+c0/tokenizer/Tokenizer.java
+ c0.tokenizer.Tokenizer
 c0/analyser/Analyser.java
  c0.analyser.Analyser
  c0.analyser.Analyser$1

@@ -49,6 +49,7 @@ public class OpCodeMap {
         opCodeMap.put(InstructionType.CmpU, (char)0x31);
         opCodeMap.put(InstructionType.CmpF, (char)0x32);
         opCodeMap.put(InstructionType.NegI, (char)0x34);
+        opCodeMap.put(InstructionType.NegF, (char)0x35);
         opCodeMap.put(InstructionType.ItoF, (char)0x36);
         opCodeMap.put(InstructionType.FtoI, (char)0x37);
         opCodeMap.put(InstructionType.ShrL, (char)0x38);

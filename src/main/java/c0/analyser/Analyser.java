@@ -750,7 +750,7 @@ public class Analyser {
             dType = DType.INT;
 
             //生成指令
-            this.oO.addInstruction(new InstructionU64(InstructionType.Push, (long)(int) uint.getValue()));
+            this.oO.addInstruction(new InstructionU64(InstructionType.Push, (long) uint.getValue()));
         }
         //对应DOUBLE_VALUE，浮点型字面量
         else if(it.check(TokenType.DOUBLE_VALUE)) {

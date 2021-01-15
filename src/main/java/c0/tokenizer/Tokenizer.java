@@ -118,9 +118,9 @@ public class Tokenizer {
         }
 
         Pos endPos = it.currentPos();
-        int result = 0;
+        long result = 0;
         try {
-            result = Integer.valueOf(tokenValue);
+            result = Long.valueOf(tokenValue);
         }catch(NumberFormatException ex){
             throw new TokenizeError(ErrorCode.IntegerOverflow, startPos);
         }
