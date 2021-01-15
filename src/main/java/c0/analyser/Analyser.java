@@ -1,5 +1,7 @@
 package c0.analyser;
 
+import c0.analyser.BC.BcBlock;
+import c0.analyser.BC.BcStack;
 import c0.analyser.returnChecker.BranchStack;
 import c0.error.AnalyzeError;
 import c0.error.CompileError;
@@ -26,6 +28,8 @@ public class Analyser {
     Stack<Integer> brStack;
     //用于返回分支及其类型的检查
     BranchStack branchStack;
+    //break和continue所使用的栈
+    BcStack bcStack;
     //oO文件，在分析时填充
     OoFile oO;
 
@@ -37,6 +41,7 @@ public class Analyser {
         oO = new OoFile();
         branchStack = new BranchStack();
         brStack = new Stack<>();
+        bcStack = new BcStack();
     }
 
 
@@ -338,6 +343,8 @@ public class Analyser {
      *     | return_stmt
      *     | block_stmt
      *     | empty_stmt
+     *     | break_stmt
+     *     | continue_stmt
      * first集为：
      * first(expr_stmt) = {'-',IDNET, UINT_VALUE, DOUBLE_VALUE, STRING_VALUE, '('}
      * first(decal_stmt) = {LET_KW,CONST_KW}
@@ -346,6 +353,8 @@ public class Analyser {
      * first(return_stmt) = {RETURN_KW}
      * first(block_stmt) = {L_BRACE}
      * first(empty_stmt) = {SEMICOLON}
+     * first(break_stmt) = {break}
+     * first(continue_stmt) = {continue}
      * @throws CompileError
      */
     public void analyseStmt() throws CompileError {
@@ -378,10 +387,28 @@ public class Analyser {
                 token.getTokenType() == TokenType.STRING_VALUE || token.getTokenType() == TokenType.L_PAREN) {
             analyseExprStmt();
         }
+        else if(token.getTokenType() == TokenType.BREAK_KW) {
+            analyseBreakStmt();
+        }
+        else if(token.getTokenType() == TokenType.CONTINUE_KW) {
+            analyseContinueStmt();
+        }
         else {
             throw new AnalyzeError(ErrorCode.UnExpectToken, it.peekToken().getStartPos());
         }
+    }
 
+    public void analyseBreakStmt() throws CompileError{
+        it.expectToken(TokenType.BREAK_KW);
+        int breakOffset = this.oO.addInstruction(new InstructionU32(InstructionType.Br, (int)0));
+        this.bcStack.addBreakOffset(breakOffset);
+
+    }
+
+    public void analyseContinueStmt() throws  CompileError{
+        it.expectToken(TokenType.CONTINUE_KW);
+        int continueOffset = this.oO.addInstruction(new InstructionU32(InstructionType.Br, (int)0));
+        this.bcStack.addContinueOffset(continueOffset);
     }
 
     /**
@@ -438,15 +465,28 @@ public class Analyser {
     public void analyseWhileStmt() throws  CompileError {
         Token whileToken = it.expectToken(TokenType.WHILE_KW);
         int startOffset = this.oO.addInstruction(new InstructionU32(InstructionType.Br, (int)0));
+
         analyseExpr();
         this.oO.addInstruction(new InstructionU32(InstructionType.BrTrue, (int)1));
         int falseOffset = this.oO.addInstruction(new InstructionU32(InstructionType.Br, (int)0));
         this.branchStack.addWhileBranch();
+        this.bcStack.addBlock();
         analyseBlockStmt(null);
         int loopOffset = this.oO.addInstruction(new InstructionU32(InstructionType.Br, (int)0));
         this.oO.modInstructionU32(loopOffset, startOffset-loopOffset);
         this.oO.modInstructionU32(falseOffset, loopOffset-falseOffset);
 
+        //修改在while循环中的while和break
+        ArrayList<Integer> breakOffset = this.bcStack.getCurBreakList();
+        for(Integer bOffset : breakOffset) {
+            this.oO.modInstructionU32(bOffset, loopOffset-bOffset);
+        }
+        ArrayList<Integer> continueOffset = this.bcStack.getCurContinueList();
+        for(Integer cOffset : continueOffset) {
+            this.oO.modInstructionU32(cOffset, startOffset-cOffset);
+        }
+
+        this.bcStack.removeBlock();
         this.branchStack.quitBranch(whileToken.getStartPos());
     }
 

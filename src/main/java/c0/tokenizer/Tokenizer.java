@@ -33,6 +33,7 @@ public class Tokenizer {
         this.keywordTable.put("string", TokenType.STRING);
         this.keywordTable.put("double", TokenType.DOUBLE);
         this.keywordTable.put("void", TokenType.VOID);
+
     }
 
 
