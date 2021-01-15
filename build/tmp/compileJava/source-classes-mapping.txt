@@ -62,10 +62,10 @@ c0/error/CompileError.java
  c0.error.CompileError
 c0/analyser/SymbolIter.java
  c0.analyser.SymbolIter
-c0/App.java
- c0.App
 c0/tokenizer/Tokenizer.java
  c0.tokenizer.Tokenizer
+c0/App.java
+ c0.App
 c0/analyser/Analyser.java
  c0.analyser.Analyser
  c0.analyser.Analyser$1

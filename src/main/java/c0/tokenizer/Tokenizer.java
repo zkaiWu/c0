@@ -31,6 +31,7 @@ public class Tokenizer {
         this.keywordTable.put("continue", TokenType.CONTINUE_KW);
         this.keywordTable.put("int", TokenType.INT);
         this.keywordTable.put("string", TokenType.STRING);
+        this.keywordTable.put("double", TokenType.DOUBLE);
         this.keywordTable.put("void", TokenType.VOID);
     }
 
@@ -106,10 +107,13 @@ public class Tokenizer {
         Pos startPos = it.currentPos();
 
         //循环读取字符，保证其是一个数字符号, 存储进value中，并转为int值存入token中
-        while(Character.isDigit(it.peekChar())){
+        while(Character.isDigit(it.peekChar()) || it.peekChar() == '.'){
             tokenValue += String.valueOf(it.nextChar());
             if(it.isEOF()) {
                 break;
+            }
+            else if(it.peekChar() == '.'){
+                return lexDouble(tokenValue, startPos);
             }
         }
 
@@ -121,6 +125,39 @@ public class Tokenizer {
             throw new TokenizeError(ErrorCode.IntegerOverflow, startPos);
         }
         return new Token(TokenType.UINT_VALUE, result, startPos, endPos);
+    }
+
+
+    public Token lexDouble(String tokenValue, Pos startPos) throws TokenizeError {
+
+
+        tokenValue += it.nextChar();
+        while(Character.isDigit(it.peekChar())) {
+            tokenValue += String.valueOf(it.nextChar());
+        }
+        if(it.peekChar() == 'e' || it.peekChar() == 'E') {
+            tokenValue += it.nextChar();
+            if(it.peekChar() == '-' || it.peekChar() == '+') {
+                tokenValue += it.nextChar();
+            }
+            if(!Character.isDigit(it.peekChar())) throw new TokenizeError(ErrorCode.InvalidInput, startPos);
+
+            while(Character.isDigit(it.peekChar())) {
+                tokenValue += it.nextChar();
+            }
+        }
+
+        Pos endPos = it.currentPos();
+        System.out.println("double value is "+tokenValue);
+
+        double valueDouble = Double.parseDouble(tokenValue);
+
+
+        long value = Double.doubleToLongBits(valueDouble);
+        System.out.println("double is " + value);
+
+        return new Token(TokenType.DOUBLE_VALUE, value, startPos, endPos);
+
     }
 
 

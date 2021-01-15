@@ -123,7 +123,7 @@ public class Analyser {
 
         //分析ty， 在声明中，ty不能为void
         Token ty = it.next();
-        if(ty.getTokenType()!=TokenType.INT && ty.getTokenType()!=TokenType.DOUBLE && ty.getTokenType()!=TokenType.VOID) {
+        if(ty.getTokenType()!=TokenType.INT && ty.getTokenType()!=TokenType.DOUBLE) {
             throw new AnalyzeError(ErrorCode.InvalidType, ty.getStartPos());
         }
         if(ty.getTokenType() == TokenType.VOID) {
@@ -576,6 +576,9 @@ public class Analyser {
             if(leftType == DType.INT) {
                 this.oO.addInstruction(new InstructionNone(InstructionType.CmpI));
             }
+            else if(leftType == DType.DOUBLE) {
+                this.oO.addInstruction(new InstructionNone(InstructionType.CmpF));
+            }
 
             switch (token.getTokenType()) {
                 case EQ: {
@@ -627,10 +630,12 @@ public class Analyser {
 
             //生成加法或者减法指令
             if(token.getTokenType() == TokenType.PLUS) {
-                this.oO.addInstruction(new InstructionNone(InstructionType.AddI));
+                if(rightType == DType.INT) this.oO.addInstruction(new InstructionNone(InstructionType.AddI));
+                else if(rightType == DType.DOUBLE) this.oO.addInstruction(new InstructionNone(InstructionType.AddF));
             }
             else if(token.getTokenType() == TokenType.MINUS) {
-                this.oO.addInstruction(new InstructionNone(InstructionType.SubI));
+                if(rightType == DType.INT) this.oO.addInstruction(new InstructionNone(InstructionType.SubI));
+                else if(rightType == DType.DOUBLE) this.oO.addInstruction(new InstructionNone(InstructionType.SubF));
             }
         }
 
@@ -652,10 +657,12 @@ public class Analyser {
 
             //生成乘法或者除法指令
             if(token.getTokenType() == TokenType.MUL) {
-                this.oO.addInstruction(new InstructionNone(InstructionType.MulI));
+                if(rightType == DType.INT) this.oO.addInstruction(new InstructionNone(InstructionType.MulI));
+                else if(rightType  == DType.DOUBLE) this.oO.addInstruction(new InstructionNone(InstructionType.MulF));
             }
             else if(token.getTokenType() == TokenType.DIV) {
-                this.oO.addInstruction(new InstructionNone(InstructionType.DivI));
+                if (rightType == DType.INT) this.oO.addInstruction(new InstructionNone(InstructionType.DivI));
+                else if(rightType == DType.DOUBLE) this.oO.addInstruction(new InstructionNone(InstructionType.DivF));
             }
 
         }
@@ -687,6 +694,12 @@ public class Analyser {
             if(ty.getTokenType()!=TokenType.INT&&ty.getTokenType()!=TokenType.DOUBLE) {         //as 只能接INT和DOUBLE
                 throw new AnalyzeError(ErrorCode.UnExpectToken, ty.getStartPos());
             }
+            if(dType == DType.INT && ty.getTokenType() == TokenType.DOUBLE) {
+                this.oO.addInstruction(new InstructionNone(InstructionType.ItoF));
+            }
+            else if(dType == DType.DOUBLE && ty.getTokenType() == TokenType.INT) {
+                this.oO.addInstruction(new InstructionNone(InstructionType.FtoI));
+            }
             dType = this.typeMap.get(ty.getTokenType());
         }
 
@@ -711,7 +724,8 @@ public class Analyser {
 
         for(;isNeg>0; isNeg--) {
             if(dType!=DType.INT&&dType!=DType.DOUBLE) throw new AnalyzeError(ErrorCode.InvalidExpr, token.getStartPos());
-            this.oO.addInstruction(new InstructionNone(InstructionType.NegI));
+            if(dType == DType.INT) this.oO.addInstruction(new InstructionNone(InstructionType.NegI));
+            if(dType == DType.DOUBLE) this.oO.addInstruction(new InstructionNone(InstructionType.NegF));
         }
         return dType;
     }
@@ -743,7 +757,7 @@ public class Analyser {
             Token doubleValue = it.expectToken(TokenType.DOUBLE_VALUE);
             dType = DType.DOUBLE;
             //生成指令
-            this.oO.addInstruction(new InstructionU64(InstructionType.Push, (long) doubleValue.getValue()));
+            this.oO.addInstruction(new InstructionU64(InstructionType.Push, (long)doubleValue.getValue()));
         }
         //对应STRING_VALUE, 字符串型字面量
         else if(it.check(TokenType.STRING_VALUE)) {
